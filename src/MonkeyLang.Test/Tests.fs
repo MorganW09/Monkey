@@ -15,22 +15,22 @@ let AssertTokens(lexer: LexerState, expectedToken) =
 [<Fact>]
 let ``LookupIdent fn test`` () =
     let fn = Lexer.lookupIdent "fn"
-    Assert.Equal(FUNCTION, fn)
+    Assert.Equal(Function, fn)
 
 [<Fact>]
 let ``LookupIdent let test `` () =
     let lt = Lexer.lookupIdent "let"
-    Assert.Equal(LET, lt)
+    Assert.Equal(Let, lt)
 
 [<Fact>]
 let ``LookupIdent other test`` () =
     let ident = Lexer.lookupIdent "ls"
-    Assert.Equal(IDENT, ident)
+    Assert.Equal(Ident, ident)
     
 [<Fact>]
 let ``LookupNumber test`` () =
     let num = Lexer.lookupNumber "2"
-    Assert.Equal(INT, num)
+    Assert.Equal(Int, num)
     
 [<Theory>]
 [<InlineData('`', false)>]
@@ -133,21 +133,21 @@ let ``readIdentifier reads next let identifier`` () =
     let lexer = createLexer "let 10"
     let identToken = Lexer.readIdentifier lexer
     Assert.Equal("let", identToken.Literal)
-    Assert.Equal(LET, identToken.TokenType)
+    Assert.Equal(Let, identToken.TokenType)
     
 [<Fact>]
 let ``readIdentifier reads next fn identifier`` () =
     let lexer = createLexer "fn (a"
     let identToken = Lexer.readIdentifier lexer
     Assert.Equal("fn", identToken.Literal)
-    Assert.Equal(FUNCTION, identToken.TokenType)
+    Assert.Equal(Function, identToken.TokenType)
     
 [<Fact>]
 let ``readIdentifier reads next ident identifier`` () =
     let lexer = createLexer "ten = 10"
     let identToken = Lexer.readIdentifier lexer
     Assert.Equal("ten", identToken.Literal)
-    Assert.Equal(IDENT, identToken.TokenType)
+    Assert.Equal(Ident, identToken.TokenType)
     
 [<Fact>]
 let ``determineComplexTokenType identifies letter token`` () =
@@ -172,42 +172,42 @@ let ``nextComplexToken reads next function`` () =
     let lexer = createLexer "fn (a"
     let complexToken = Lexer.nextComplexToken lexer
     Assert.Equal("fn", complexToken.Literal)
-    Assert.Equal(FUNCTION, complexToken.TokenType)
+    Assert.Equal(Function, complexToken.TokenType)
     
 [<Fact>]
 let ``nextComplexToken reads next let identifier`` () =
     let lexer = createLexer "let (a"
     let identToken = Lexer.nextComplexToken lexer
     Assert.Equal("let", identToken.Literal)
-    Assert.Equal(LET, identToken.TokenType)
+    Assert.Equal(Let, identToken.TokenType)
     
 [<Fact>]
 let ``nextComplexToken reads next ident identifier`` () =
     let lexer = createLexer "ten = 10"
     let identToken = Lexer.nextComplexToken lexer
     Assert.Equal("ten", identToken.Literal)
-    Assert.Equal(IDENT, identToken.TokenType)
+    Assert.Equal(Ident, identToken.TokenType)
     
 [<Fact>]
 let ``nextComplexToken reads next number`` () =
     let lexer = createLexer "10 = 10"
     let identToken = Lexer.nextComplexToken lexer
     Assert.Equal("10", identToken.Literal)
-    Assert.Equal(INT, identToken.TokenType)
+    Assert.Equal(Int, identToken.TokenType)
     
 [<Fact>]
 let ``nextComplexToken returns illegal token`` () =
     let lexer = createLexer "? = 10"
     let identToken = Lexer.nextComplexToken lexer
     Assert.Equal("?", identToken.Literal)
-    Assert.Equal(ILLEGAL, identToken.TokenType)
+    Assert.Equal(TokenType.Illegal, identToken.TokenType)
 
 [<Fact>]
 let ``skipWhitespaces skips whitespace`` () =
     let lexer = createLexer "      ("
     Lexer.skipWhitespace lexer
     let token = Lexer.nextToken lexer
-    Assert.Equal(LPAREN, token.TokenType)
+    Assert.Equal(Lparen, token.TokenType)
     Assert.Equal("(", token.Literal)
 
 [<Theory>]
@@ -226,15 +226,15 @@ let ``skipWhitespace only skips whitespace`` input =
 let ``Can Lex Symbols`` () =
     let expectedTokens = 
         [
-            { TokenType = ASSIGN; Literal = "=" };
-            { TokenType = PLUS; Literal = "+" };
-            { TokenType = LPAREN; Literal = "(" };
-            { TokenType = RPAREN; Literal = ")" };
-            { TokenType = LBRACE; Literal = "{" };
-            { TokenType = RBRACE; Literal = "}" };
-            { TokenType = COMMA; Literal = "," };
-            { TokenType = SEMICOLON; Literal = ";" };
-            { TokenType = EOF; Literal = "" }
+            { TokenType = Assign; Literal = "=" };
+            { TokenType = Plus; Literal = "+" };
+            { TokenType = Lparen; Literal = "(" };
+            { TokenType = Rparen; Literal = ")" };
+            { TokenType = Lbrace; Literal = "{" };
+            { TokenType = Rbrace; Literal = "}" };
+            { TokenType = Comma; Literal = "," };
+            { TokenType = Semicolon; Literal = ";" };
+            { TokenType = Eof; Literal = "" }
         ]
     
     let input = "=+(){},;"
@@ -253,49 +253,129 @@ let add = fn(x, y) {
 
 let result = add(five, ten);"  
     let expectedTokens = [
-        { TokenType = LET; Literal = "let" };
-        { TokenType = IDENT; Literal = "five" };
-        { TokenType = ASSIGN; Literal = "=" };
-        { TokenType = INT; Literal = "5" };
-        { TokenType = SEMICOLON; Literal = ";" };
+        { TokenType = Let; Literal = "let" };
+        { TokenType = Ident; Literal = "five" };
+        { TokenType = Assign; Literal = "=" };
+        { TokenType = Int; Literal = "5" };
+        { TokenType = Semicolon; Literal = ";" };
 
         
-        { TokenType = LET; Literal = "let" };
-        { TokenType = IDENT; Literal = "ten" };
-        { TokenType = ASSIGN; Literal = "=" };
-        { TokenType = INT; Literal = "10" };
-        { TokenType = SEMICOLON; Literal = ";" };
+        { TokenType = Let; Literal = "let" };
+        { TokenType = Ident; Literal = "ten" };
+        { TokenType = Assign; Literal = "=" };
+        { TokenType = Int; Literal = "10" };
+        { TokenType = Semicolon; Literal = ";" };
 
         
-        { TokenType = LET; Literal = "let" };
-        { TokenType = IDENT; Literal = "add" };
-        { TokenType = ASSIGN; Literal = "=" };
-        { TokenType = FUNCTION; Literal = "fn" };
-        { TokenType = LPAREN; Literal = "(" };
-        { TokenType = IDENT; Literal = "x" };
-        { TokenType = COMMA; Literal = "," };
-        { TokenType = IDENT; Literal = "y" };
-        { TokenType = RPAREN; Literal = ")" };
-        { TokenType = LBRACE; Literal = "{" };
-        { TokenType = IDENT; Literal = "x" };
-        { TokenType = PLUS; Literal = "+" };
-        { TokenType = IDENT; Literal = "y" };
-        { TokenType = SEMICOLON; Literal = ";" };
-        { TokenType = RBRACE; Literal = "}" };
-        { TokenType = SEMICOLON; Literal = ";" };
+        { TokenType = Let; Literal = "let" };
+        { TokenType = Ident; Literal = "add" };
+        { TokenType = Assign; Literal = "=" };
+        { TokenType = Function; Literal = "fn" };
+        { TokenType = Lparen; Literal = "(" };
+        { TokenType = Ident; Literal = "x" };
+        { TokenType = Comma; Literal = "," };
+        { TokenType = Ident; Literal = "y" };
+        { TokenType = Rparen; Literal = ")" };
+        { TokenType = Lbrace; Literal = "{" };
+        { TokenType = Ident; Literal = "x" };
+        { TokenType = Plus; Literal = "+" };
+        { TokenType = Ident; Literal = "y" };
+        { TokenType = Semicolon; Literal = ";" };
+        { TokenType = Rbrace; Literal = "}" };
+        { TokenType = Semicolon; Literal = ";" };
 
         
-        { TokenType = LET; Literal = "let" };
-        { TokenType = IDENT; Literal = "result" };
-        { TokenType = ASSIGN; Literal = "=" };
-        { TokenType = IDENT; Literal = "add" };
-        { TokenType = LPAREN; Literal = "(" };
-        { TokenType = IDENT; Literal = "five" };
-        { TokenType = COMMA; Literal = "," };
-        { TokenType = IDENT; Literal = "ten" };
-        { TokenType = RPAREN; Literal = ")" };
-        { TokenType = SEMICOLON; Literal = ";" };
-        { TokenType = EOF; Literal = "" };    
+        { TokenType = Let; Literal = "let" };
+        { TokenType = Ident; Literal = "result" };
+        { TokenType = Assign; Literal = "=" };
+        { TokenType = Ident; Literal = "add" };
+        { TokenType = Lparen; Literal = "(" };
+        { TokenType = Ident; Literal = "five" };
+        { TokenType = Comma; Literal = "," };
+        { TokenType = Ident; Literal = "ten" };
+        { TokenType = Rparen; Literal = ")" };
+        { TokenType = Semicolon; Literal = ";" };
+        { TokenType = Eof; Literal = "" };    
+    ]
+    
+    let lexer = Lexer.createLexer input
+    expectedTokens |> List.iter (fun et -> AssertTokens(lexer, et))
+
+[<Fact>]
+let ``Can Lex Extended Token Set`` () =
+    let input = 
+        "!-/*5;
+5 < 10 > 5;"  
+
+    let expectedTokens = [
+        { TokenType = Bang; Literal = "!"};
+        { TokenType = Minus; Literal = "-"};
+        { TokenType = Slash; Literal = "/"};
+        { TokenType = Asterik; Literal = "*"};
+        { TokenType = Int; Literal = "5"};
+        { TokenType = Semicolon; Literal = ";"};
+        
+        { TokenType = Int; Literal = "5"};
+        { TokenType = Lt; Literal = "<"};
+        { TokenType = Int; Literal = "10"};
+        { TokenType = Gt; Literal = ">"};
+        { TokenType = Int; Literal = "5"};
+        { TokenType = Semicolon; Literal = ";"};
+    ]
+
+    let lexer = Lexer.createLexer input
+    expectedTokens |> List.iter (fun et -> AssertTokens(lexer, et))
+
+[<Fact>]
+let ``Can Lex more control tokens`` () =
+    let input =
+        "if (5 < 10) {
+    return true;
+} else {
+    return false;
+}"
+    let expectedTokens = [
+        { TokenType = If; Literal = "if"};
+        { TokenType = Lparen; Literal = "("};
+        { TokenType = Int; Literal = "5"};
+        { TokenType = Lt; Literal = "<"};
+        { TokenType = Int; Literal = "10"};
+        { TokenType = Rparen; Literal = ")"};
+        { TokenType = Lbrace; Literal = "{"};
+
+        { TokenType = Return; Literal = "return"};
+        { TokenType = True; Literal = "true"};
+        { TokenType = Semicolon; Literal = ";"};
+        
+        { TokenType = Rbrace; Literal = "}"};
+        { TokenType = Else; Literal = "else"};
+        { TokenType = Lbrace; Literal = "{"};
+
+        { TokenType = Return; Literal = "return"};
+        { TokenType = False; Literal = "false"};
+        { TokenType = Semicolon; Literal = ";"};
+        
+        { TokenType = Rbrace; Literal = "}"};        
+    ]
+    
+    let lexer = Lexer.createLexer input
+    expectedTokens |> List.iter (fun et -> AssertTokens(lexer, et))
+
+[<Fact>]
+let ``Can lex double operators`` () =
+    let input =
+        "10 == 10;
+10 != 9;"
+
+    let expectedTokens = [
+        { TokenType = Int; Literal = "10"};
+        { TokenType = Eq; Literal = "=="};
+        { TokenType = Int; Literal = "10"};
+        { TokenType = Semicolon; Literal = ";"};
+        { TokenType = Int; Literal = "10"};
+        { TokenType = Not_Eq; Literal = "!="};
+        { TokenType = Int; Literal = "9"};
+        { TokenType = Semicolon; Literal = ";"};
     ]
     
     let lexer = Lexer.createLexer input

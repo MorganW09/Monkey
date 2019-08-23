@@ -31,15 +31,17 @@ type ComplexTokenType =
 
 /// Determines the TokenType of the string token
 let internal lookupIdent ident =
-    if ident = "fn" then
-        FUNCTION
-    else if ident = "let" then
-        LET
-    else
-        IDENT
+    if ident = "fn" then Function
+    else if ident = "let" then Let
+    else if ident = "true" then True
+    else if ident = "false" then False
+    else if ident = "if" then If
+    else if ident = "else" then Else
+    else if ident = "return" then Return
+    else Ident
 
 /// Determines the TokenType of the number token
-let internal lookupNumber number = INT
+let internal lookupNumber number = Int
 
 /// Determines whether the char is a letter
 let internal isLetter(ch: char) =
@@ -100,7 +102,7 @@ let internal nextComplexToken(l: LexerState) =
     match determineComplexTokenType(l) with 
     | Letter -> readIdentifier(l)
     | Digit -> readNumber(l)
-    | Illegal -> {TokenType = TokenType.ILLEGAL; Literal = l.ch.ToString()}
+    | Illegal -> {TokenType = TokenType.Illegal; Literal = l.ch.ToString()}
     
 /// Skips any whitespace encountered in the input
 let internal skipWhitespace(l: LexerState) =
@@ -114,15 +116,21 @@ let nextToken (l: LexerState) =
 
     let nextToken = 
         match l.ch with
-        | '=' ->    { TokenType = TokenType.ASSIGN; Literal = l.ch.ToString()}
-        | '+' ->    { TokenType = TokenType.PLUS; Literal = l.ch.ToString()}
-        | ';' ->    { TokenType = TokenType.SEMICOLON; Literal = l.ch.ToString()}
-        | '(' ->    { TokenType = TokenType.LPAREN; Literal = l.ch.ToString()}
-        | ')' ->    { TokenType = TokenType.RPAREN; Literal = l.ch.ToString()}
-        | '{' ->    { TokenType = TokenType.LBRACE; Literal = l.ch.ToString()}
-        | '}' ->    { TokenType = TokenType.RBRACE; Literal = l.ch.ToString()}
-        | ',' ->    { TokenType = TokenType.COMMA; Literal = l.ch.ToString()}
-        | '\000' -> { TokenType = TokenType.EOF; Literal = ""}
+        | '=' ->    { TokenType = TokenType.Assign; Literal = l.ch.ToString()}
+        | '+' ->    { TokenType = TokenType.Plus; Literal = l.ch.ToString()}
+        | ';' ->    { TokenType = TokenType.Semicolon; Literal = l.ch.ToString()}
+        | '(' ->    { TokenType = TokenType.Lparen; Literal = l.ch.ToString()}
+        | ')' ->    { TokenType = TokenType.Rparen; Literal = l.ch.ToString()}
+        | '{' ->    { TokenType = TokenType.Lbrace; Literal = l.ch.ToString()}
+        | '}' ->    { TokenType = TokenType.Rbrace; Literal = l.ch.ToString()}
+        | ',' ->    { TokenType = TokenType.Comma; Literal = l.ch.ToString()}
+        | '!' ->    { TokenType = TokenType.Bang; Literal = l.ch.ToString()}
+        | '-' ->    { TokenType = TokenType.Minus; Literal = l.ch.ToString()}
+        | '/' ->    { TokenType = TokenType.Slash; Literal = l.ch.ToString()}
+        | '*' ->    { TokenType = TokenType.Asterik; Literal = l.ch.ToString()}
+        | '<' ->    { TokenType = TokenType.Lt; Literal = l.ch.ToString()}
+        | '>' ->    { TokenType = TokenType.Gt; Literal = l.ch.ToString()}
+        | '\000' -> { TokenType = TokenType.Eof; Literal = ""}
         | _ ->      nextComplexToken(l)
     readChar l
     nextToken
