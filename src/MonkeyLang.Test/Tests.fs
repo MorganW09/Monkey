@@ -222,6 +222,18 @@ let ``skipWhitespace only skips whitespace`` input =
     let token = Lexer.nextToken lexer
     Assert.Equal(input, token.Literal)
 
+[<Theory>]
+[<InlineData("==", "==")>]
+[<InlineData("=a", "=")>]
+[<InlineData("a=", "a")>]
+[<InlineData("!=", "!=")>]
+[<InlineData("!a", "!")>]
+[<InlineData("a!", "a")>]
+let ``nextEqualsOperator correctly reads double operators`` input expected =
+    let lexer = createLexer input
+    let token = Lexer.nextToken lexer
+    Assert.Equal(expected, token.Literal)
+
 [<Fact>]
 let ``Can Lex Symbols`` () =
     let expectedTokens = 

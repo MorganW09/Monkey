@@ -60,6 +60,12 @@ let private canReadNext(can:char -> bool) (l: LexerState) =
     | true -> can(l.input.Chars(l.position + 1))
     | false -> false
 
+// Reads next char without incrementing position counters
+let internal peekChar(l: LexerState) =
+    match l.readPosition >= l.input.Length with
+    | true -> '\000'
+    |false -> l.input.Chars l.readPosition
+
 /// Determines whether next char is part of current digit token
 let internal canReadNextDigit(l: LexerState) = canReadNext isDigit l
 
@@ -68,10 +74,7 @@ let internal canReadNextLetter(l: LexerState) = canReadNext isLetter l
 
 /// Advances state to the next char in the input
 let internal readChar (l: LexerState) =
-    let newChar = 
-        match l.readPosition >= l.input.Length with
-        | true -> '\000'
-        | false -> l.input.Chars l.readPosition
+    let newChar = peekChar(l)
     l.ch <- newChar
     l.position <- l.readPosition
     l.readPosition <- l.readPosition + 1
@@ -108,7 +111,28 @@ let internal nextComplexToken(l: LexerState) =
 let internal skipWhitespace(l: LexerState) =
     while l.ch = ' ' || l.ch = '\t' || l.ch = '\n' || l.ch = '\r' do
         readChar l
-    
+
+/// 
+let internal nextDoubleOperator(l: LexerState) (potentialNextChar: char) (trueTokenType: TokenType) (falseTokenType: TokenType)=
+    let nextChar = peekChar(l)
+    if nextChar = potentialNextChar then
+        let ch = l.ch
+        readChar(l) 
+        let literal = ch.ToString() + l.ch.ToString()
+        {TokenType = trueTokenType; Literal = literal}
+    else
+        {TokenType = falseTokenType; Literal = l.ch.ToString()}
+
+/// Reads a token with the first char being '=', either a single char
+/// assign or a double operator '==' equals
+let internal nextEqualsOperator(l: LexerState) =
+    nextDoubleOperator l '=' TokenType.Eq TokenType.Assign
+
+/// Reads next token with the first char being '!', either a single char
+/// bang or a double operator '!=' not equals
+let internal nextBangOperator(l: LexerState) =
+    nextDoubleOperator l '=' TokenType.Not_Eq TokenType.Bang
+
 /// Reads the next available token in the input
 let nextToken (l: LexerState) =
 
@@ -116,7 +140,7 @@ let nextToken (l: LexerState) =
 
     let nextToken = 
         match l.ch with
-        | '=' ->    { TokenType = TokenType.Assign; Literal = l.ch.ToString()}
+        | '=' ->    nextEqualsOperator(l)
         | '+' ->    { TokenType = TokenType.Plus; Literal = l.ch.ToString()}
         | ';' ->    { TokenType = TokenType.Semicolon; Literal = l.ch.ToString()}
         | '(' ->    { TokenType = TokenType.Lparen; Literal = l.ch.ToString()}
@@ -124,7 +148,7 @@ let nextToken (l: LexerState) =
         | '{' ->    { TokenType = TokenType.Lbrace; Literal = l.ch.ToString()}
         | '}' ->    { TokenType = TokenType.Rbrace; Literal = l.ch.ToString()}
         | ',' ->    { TokenType = TokenType.Comma; Literal = l.ch.ToString()}
-        | '!' ->    { TokenType = TokenType.Bang; Literal = l.ch.ToString()}
+        | '!' ->    nextBangOperator(l)
         | '-' ->    { TokenType = TokenType.Minus; Literal = l.ch.ToString()}
         | '/' ->    { TokenType = TokenType.Slash; Literal = l.ch.ToString()}
         | '*' ->    { TokenType = TokenType.Asterik; Literal = l.ch.ToString()}
