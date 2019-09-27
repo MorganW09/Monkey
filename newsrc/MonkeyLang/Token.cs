@@ -14,6 +14,11 @@ namespace MonkeyLang
 
         public string Type { get; set; }
         public string Literal { get; set; }
+
+        public override string ToString()
+        {
+            return $"{{Type:{Type}, Literal:{Literal}}}";
+        }
     }
 
     public class TokenType
