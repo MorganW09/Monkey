@@ -106,10 +106,9 @@ namespace MonkeyLang.Lexical
 
         public Token NextToken()
         {
-            Token t = null;
-
             skipWhitespace();
 
+            Token t;
             switch (ch)
             {
                 case '=':
@@ -196,7 +195,7 @@ namespace MonkeyLang.Lexical
             }
 
             readChar();
-            return t;
+            return t!;
         }
     }
 }

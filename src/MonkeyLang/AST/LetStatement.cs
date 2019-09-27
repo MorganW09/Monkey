@@ -6,9 +6,16 @@ namespace MonkeyLang.AST
 {
     public class LetStatement : Statement
     {
-        public Token Token { get; set; }
-        public Identifier Name { get; set; }
-        public Expression Value { get; set; }
+
+        public LetStatement(Token Token, Identifier Name)
+        {
+            this.Token = Token;
+            this.Name = Name;
+        }
+
+        public Token Token { get; }
+        public Identifier Name { get; }
+        public Expression? Value { get; set; }
         public override Node StatementNode()
         {
             throw new NotImplementedException();

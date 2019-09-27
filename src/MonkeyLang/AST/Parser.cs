@@ -25,9 +25,68 @@ namespace MonkeyLang.AST
             peekToken = Lexer.NextToken();
         }
 
+        internal bool curTokenIs(string tokenType)
+        {
+            return curToken.Type == tokenType;
+        }
+
+        internal bool peekTokenIs(string tokenType)
+        {
+            return peekToken.Type == tokenType;
+        }
+
+        internal bool expectPeek(string tokenType)
+        {
+            if (peekTokenIs(tokenType))
+            {
+                NextToken();
+                return true;
+            }
+            return false;
+        }
+
+        public LetStatement? ParseLetStatement()
+        {
+            if (!expectPeek(TokenType.IDENT))
+                return null;
+
+            var identifier = new Identifier(curToken);
+            var statement = new LetStatement(curToken, identifier);
+
+            if (!expectPeek(TokenType.ASSIGN))
+                return null;
+
+            while (!curTokenIs(TokenType.SEMICOLON))
+            {
+                NextToken();
+            }
+
+            return statement;
+        }
+
+        public Statement? ParseStatement()
+        {
+            var statement = curToken.Type switch
+            {
+                TokenType.LET => ParseLetStatement(),
+                _ => null
+            };
+            return statement;
+        }
+
         public Program ParseProgram()
         {
-            return null;
+            var program = new Program();
+
+            while (curToken.Type != TokenType.EOF)
+            {
+                var statement = ParseStatement();
+
+                if (statement != null)
+                    program.Statements.Add(statement);
+                NextToken();
+            }
+            return program;
         }
     }
 }

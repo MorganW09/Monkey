@@ -21,7 +21,8 @@ namespace MonkeyLang
         }
     }
 
-    public class TokenType
+    
+    public static class TokenType
     {
         public const string ILLEGAL = "ILLEGAL";
         public const string EOF = "EOF";

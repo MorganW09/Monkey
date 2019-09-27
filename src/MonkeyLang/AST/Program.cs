@@ -6,11 +6,15 @@ namespace MonkeyLang.AST
 {
     public class Program : Node
     {
-        public Statement[] Statements { get; set; }
+        public Program()
+        {
+            Statements = new List<Statement>();
+        }
+        public List<Statement> Statements { get; set; }
 
         public string TokenLiteral()
         {
-            if (Statements.Length > 0)
+            if (Statements.Count > 0)
                 return Statements[0].TokenLiteral();
             else
                 return "";

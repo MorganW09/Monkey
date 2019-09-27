@@ -6,8 +6,13 @@ namespace MonkeyLang.AST
 {
     public class Identifier : Expression
     {
-        public Token Token { get; set; }
-        public string Value { get; set; }
+        public Identifier(Token token)
+        {
+            Token = token;
+            Value = token.Literal;
+        }
+        public Token Token { get; }
+        public string Value { get;}
 
         public override Node ExpressionNode()
         {

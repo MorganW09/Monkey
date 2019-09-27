@@ -24,7 +24,7 @@ let foobar = 838383;";
 
             Assert.NotNull(program);
 
-            Assert.Equal(3, program.Statements.Length);
+            Assert.Equal(3, program.Statements.Count);
 
             var expectedIdentifiers = new List<string>() { "x", "y", "foobar" };
 
