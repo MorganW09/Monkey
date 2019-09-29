@@ -25,17 +25,17 @@ namespace MonkeyLang.AST
             peekToken = Lexer.NextToken();
         }
 
-        internal bool curTokenIs(string tokenType)
+        internal bool curTokenIs(TokenType tokenType)
         {
             return curToken.Type == tokenType;
         }
 
-        internal bool peekTokenIs(string tokenType)
+        internal bool peekTokenIs(TokenType tokenType)
         {
             return peekToken.Type == tokenType;
         }
 
-        internal bool expectPeek(string tokenType)
+        internal bool expectPeek(TokenType tokenType)
         {
             if (peekTokenIs(tokenType))
             {

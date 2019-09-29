@@ -7,11 +7,11 @@ namespace MonkeyLang.Lexical
     public class Lexer
     {
         public string input { get; }
-        public int position { get; set; }
-        public int readPosition { get; set; }
-        public char ch { get; set; }
+        public int position { get; private set; }
+        public int readPosition { get; private set; }
+        public char ch { get; private set; }
 
-        Dictionary<string, string> keywords = new Dictionary<string, string>()
+        Dictionary<string, TokenType> keywords = new Dictionary<string, TokenType>()
         {
             { "fn", TokenType.FUNCTION },
             { "let", TokenType.LET },
@@ -67,11 +67,11 @@ namespace MonkeyLang.Lexical
             return '0' <= @char && @char <= '9';
         }
 
-        internal string lookupIdent(string ident)
+        internal TokenType lookupIdent(string ident)
         {
-            if (keywords.TryGetValue(ident, out string keyword))
+            if (keywords.TryGetValue(ident, out TokenType type))
             {
-                return keyword;
+                return type;
             }
             return TokenType.IDENT;
         }

@@ -9,8 +9,24 @@ namespace MonkeyLang.Test
     public class LexerTests
     {
 
+        [Theory]
+        [InlineData("let x = y;", 'l')]
+        [InlineData("=+(){},;", '=')]
+        [InlineData("fn", 'f')]
+        public void Test_LexerInitializesCorrectly(string input, char firstChar)
+        {
+            //string input = "let x = y;";
+
+            var lexer = new Lexer(input);
+
+            Assert.Equal(input, lexer.input);
+            Assert.Equal(0, lexer.position);
+            Assert.Equal(1, lexer.readPosition);
+            Assert.Equal(firstChar, lexer.ch);
+        }
+
         [Fact]
-        public void TestNextToken()
+        public void Test_NextToken()
         {
             string input = "=+(){},;";
 
