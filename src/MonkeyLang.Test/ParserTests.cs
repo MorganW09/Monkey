@@ -36,7 +36,7 @@ let foobar = 838383;";
             }
         }
 
-        public void testLetStatement(Statement statement, string expectedIdentifier)
+        private void testLetStatement(Statement statement, string expectedIdentifier)
         {
             Assert.Equal("let", statement.TokenLiteral());
 

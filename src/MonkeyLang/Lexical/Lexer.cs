@@ -37,10 +37,10 @@ namespace MonkeyLang.Lexical
             else
             {
                 ch = input[readPosition];
+                position = readPosition;
+                readPosition++;
             }
 
-            position = readPosition;
-            readPosition++;
         }
 
         public char peekChar()
@@ -55,14 +55,14 @@ namespace MonkeyLang.Lexical
             }
         }
 
-        internal bool isLetter(char @char)
+        public static bool isLetter(char @char)
         {
             return 'a' <= @char && @char <= 'z'
                 || 'A' <= @char && @char <= 'Z'
                 || '_' == @char;
         }
 
-        internal bool isDigit(char @char)
+        public static bool isDigit(char @char)
         {
             return '0' <= @char && @char <= '9';
         }

@@ -1,15 +1,16 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using MonkeyLang.Lexical;
 
 namespace MonkeyLang.Runner
 {
     class Program
     {
+        [SuppressMessage("Microsoft.Usage", "CA1801")]
         static void Main(string[] args)
-        {
-            string input = String.Empty;
-            Console.WriteLine("Enter code block:");
-            input = Console.ReadLine();
+        {          
+            Console.WriteLine(Properties.Resources.REPLMessage);
+            string input = Console.ReadLine();
 
             var lexer = new Lexer(input);
             Console.WriteLine(input);

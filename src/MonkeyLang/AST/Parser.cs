@@ -15,8 +15,14 @@ namespace MonkeyLang.AST
         {
             Lexer = lexer;
 
-            NextToken();
-            NextToken();
+
+            curToken = peekToken;
+            peekToken = Lexer.NextToken();
+
+            curToken = peekToken;
+            peekToken = Lexer.NextToken();
+            //NextToken();
+            //NextToken();
         }
 
         public void NextToken()
