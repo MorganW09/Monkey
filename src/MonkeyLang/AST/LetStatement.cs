@@ -16,9 +16,9 @@ namespace MonkeyLang.AST
         public Token Token { get; }
         public Identifier Name { get; }
         public Expression? Value { get; set; }
-        public override Node StatementNode()
+
+        public override void StatementNode()
         {
-            throw new NotImplementedException();
         }
 
         public override string TokenLiteral()

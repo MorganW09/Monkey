@@ -8,6 +8,6 @@ namespace MonkeyLang.AST
     {
         public abstract string TokenLiteral();
 
-        public abstract Node ExpressionNode();
+        public abstract void ExpressionNode();
     }
 }
