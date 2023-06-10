@@ -3,6 +3,8 @@
 open System
 
 [<EntryPoint>]
-let main argv =
-    printfn "Hello World from F#!"
-    0 // return an integer exit code
+let main argv =    
+    printfn("Hello! This is the Monkey programming language!")
+    printfn("Feel free to type in commands")
+    Repl.start()
+    0

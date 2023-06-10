@@ -8,7 +8,15 @@
         | INT
         // operators
         | ASSIGN
+        | EQ
+        | NOT_EQ
         | PLUS
+        | MINUS
+        | BANG
+        | ASTERISK
+        | SLASH
+        | LT 
+        | GT
         // delimiters
         | COMMA
         | SEMICOLON
@@ -19,6 +27,11 @@
         // keywords
         | FUNCTION
         | LET
+        | TRUE
+        | FALSE
+        | IF
+        | ELSE
+        | RETURN
     
     type Token =
         {

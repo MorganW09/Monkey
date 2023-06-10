@@ -18,6 +18,16 @@ module Lexer
             FUNCTION
         else if ident = "let" then
             LET
+        else if ident = "if" then
+            IF
+        else if ident = "else" then
+            ELSE
+        else if ident = "return" then
+            RETURN
+        else if ident = "true" then
+            TRUE
+        else if ident = "false" then
+            FALSE
         else
             IDENT
 
@@ -51,7 +61,10 @@ module Lexer
         ch.CompareTo('0') >= 0 && ch.CompareTo('9') <= 0
 
     let canReadDigit(l: LexerState) =
-        isDigit(l.input.Chars(l.position + 1))
+        //ensure I can read next position
+        let canReadNextPosition = l.position + 1 < l.input.Length
+        canReadNextPosition && isDigit(l.input.Chars(l.position + 1)) 
+        
 
     let readNumber(l: LexerState) =
         let pos = l.position
@@ -59,6 +72,11 @@ module Lexer
             readChar l
         let literal = l.input.Substring(pos, (l.position - pos + 1))
         (INT, literal)
+
+    let peekChar(l : LexerState) =
+        match l.readPosition >= l.input.Length with
+        | true -> '\000'
+        | false -> l.input.Chars l.readPosition
     
     let findComplexTokenType l =
         if isLetter(l.ch) then
@@ -85,12 +103,32 @@ module Lexer
 
         let (tokenType, literal) =
             match l.ch with
-            | '=' -> (TokenType.ASSIGN, l.ch.ToString())
+            | '=' -> 
+                let nextChar = peekChar l
+                match nextChar with
+                | '=' -> 
+                    let ch = l.ch
+                    readChar l
+                    (TokenType.EQ, ch.ToString() + l.ch.ToString())
+                | _ -> (TokenType.ASSIGN, l.ch.ToString())
+            | '+' -> (TokenType.PLUS, l.ch.ToString())
+            | '-' -> (TokenType.MINUS, l.ch.ToString())
+            | '!' ->
+                let nextChar = peekChar l
+                match nextChar with
+                | '=' ->
+                    let ch = l.ch
+                    readChar l
+                    (TokenType.NOT_EQ, ch.ToString() + l.ch.ToString())
+                | _ -> (TokenType.BANG, l.ch.ToString())
+            | '*' -> (TokenType.ASTERISK, l.ch.ToString())
+            | '/' -> (TokenType.SLASH, l.ch.ToString())
+            | '<' -> (TokenType.LT, l.ch.ToString())
+            | '>' -> (TokenType.GT, l.ch.ToString())
+            | ',' -> (TokenType.COMMA, l.ch.ToString())
             | ';' -> (TokenType.SEMICOLON, l.ch.ToString())
             | '(' -> (TokenType.LPAREN, l.ch.ToString())
             | ')' -> (TokenType.RPAREN, l.ch.ToString())
-            | ',' -> (TokenType.COMMA, l.ch.ToString())
-            | '+' -> (TokenType.PLUS, l.ch.ToString())
             | '{' -> (TokenType.LBRACE, l.ch.ToString())
             | '}' -> (TokenType.RBRACE, l.ch.ToString())
             | '\000' -> (TokenType.EOF, "")

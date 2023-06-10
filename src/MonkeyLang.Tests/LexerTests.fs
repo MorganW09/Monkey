@@ -1,4 +1,4 @@
-module Tests
+module LexerTests
 
 open System
 open Xunit
@@ -34,12 +34,14 @@ let ``Can Lex Basic Symbols`` () =
     expectedTokens |> List.iter (fun et -> AssertTokens(lexer, et))
 
 [<Fact>]
-let ``Can Lex More Advanced Tokens`` () =
+let ``Can Lex Identifiers`` () =
     let input = "let five = 5;
 let ten = 10;
+
 let add = fn(x, y) {
-x + y;
+  x + y;
 };
+
 let result = add(five, ten);"
     
     let expectedTokensRaw:(TokenType * string) list =
@@ -86,3 +88,86 @@ let result = add(five, ten);"
     let expectedTokens = buildTokenTypes expectedTokensRaw
     let lexer = createLexer input
     expectedTokens |> List.iter (fun et -> AssertTokens(lexer, et))
+
+[<Fact>]
+let ``Can Lex More Tokens`` () =
+    let input = "!-/*5;
+
+5 < 10 > 5;"
+    
+    let expectedTokensRaw:(TokenType * string) list =
+        [
+            (TokenType.BANG, "!");
+            (TokenType.MINUS, "-");
+            (TokenType.SLASH, "/");
+            (TokenType.ASTERISK, "*");
+            (TokenType.INT, "5");
+            (TokenType.SEMICOLON, ";");
+            (TokenType.INT, "5");
+            (TokenType.LT, "<");
+            (TokenType.INT, "10");
+            (TokenType.GT, ">");
+            (TokenType.INT, "5");
+            (TokenType.SEMICOLON, ";");
+            (TokenType.EOF, "");
+        ]
+
+    let expectedTokens = buildTokenTypes expectedTokensRaw
+    let lexer = createLexer input
+    expectedTokens |> List.iter (fun et -> AssertTokens(lexer, et))
+
+[<Fact>]
+let ``Can Lex more keywords`` () =
+    let input = "if (5 < 10) {
+        return true;
+    } else {
+        return false;
+    }"
+
+    let expectedTokensRaw:(TokenType * string) list =
+        [
+
+            (TokenType.IF, "if");
+            (TokenType.LPAREN, "(");
+            (TokenType.INT, "5");
+            (TokenType.LT, "<");
+            (TokenType.INT, "10");
+            (TokenType.RPAREN, ")");
+            (TokenType.LBRACE, "{");
+            (TokenType.RETURN, "return");
+            (TokenType.TRUE, "true");
+            (TokenType.SEMICOLON, ";");
+            (TokenType.RBRACE, "}");
+            (TokenType.ELSE, "else");
+            (TokenType.LBRACE, "{");
+            (TokenType.RETURN, "return");
+            (TokenType.FALSE, "false");
+            (TokenType.SEMICOLON, ";");
+            (TokenType.RBRACE, "}");
+            (TokenType.EOF, "");
+        ]
+
+    let expectedTokens = buildTokenTypes expectedTokensRaw
+    let lexer = createLexer input
+    expectedTokens |> List.iter (fun et -> AssertTokens(lexer, et))
+    
+[<Fact>]
+let ``Can Lex advanced equals/not equals operators`` () =
+    let input = "10 == 10
+10 != 9"
+
+    let expectedTokensRaw:(TokenType * string) list =
+        [
+            (TokenType.INT, "10");
+            (TokenType.EQ, "==");
+            (TokenType.INT, "10");
+            (TokenType.INT, "10");
+            (TokenType.NOT_EQ, "!=");
+            (TokenType.INT, "9");
+            (TokenType.EOF, "");
+        ]
+
+    let expectedTokens = buildTokenTypes expectedTokensRaw
+    let lexer = createLexer input
+    expectedTokens |> List.iter (fun et -> AssertTokens(lexer, et))
+    
