@@ -5,6 +5,7 @@ module Parser
             lexer : Lexer.LexerState
             mutable curToken : Tokens.Token
             mutable peekToken : Tokens.Token
+            mutable errors : ResizeArray<string> //TODO - maybe change to option type??
         }
 
     let nextToken (p: ParserState) =
@@ -17,12 +18,18 @@ module Parser
     let peekTokenIs (p: ParserState) (t: TokenType) =
         p.peekToken.TokenType = t
 
+    let peekError (p: ParserState) (t: TokenType) =
+        let msg = sprintf "expected next token to be %s, got %s instead" (t.ToString()) (p.peekToken.TokenType.ToString())
+        p.errors.Add(msg)
+
     let expectPeek (p: ParserState) (t: TokenType) =
         match peekTokenIs p t with
         | true -> 
             nextToken p 
             true
-        | false -> false
+        | false -> 
+            peekError p t
+            false
 
     let parseLetStatement (p: ParserState) =
         let letToken = p.curToken
@@ -46,15 +53,35 @@ module Parser
 
         new Ast.LetStatement(letToken, identStatement, blankExpression)
 
-    let parseStatement (p: ParserState) =
+    let parseReturnStatement p =
+        let returnToken = p.curToken
+
+        nextToken p
+
+        //TODO - actually generate expression for value
+        let mutable notSemicolon = true
+        while notSemicolon do
+            nextToken p
+            notSemicolon <- not(curTokenIs p TokenType.SEMICOLON)
+
+        //TODO - stop gap solution until we can create an actual INT expression
+        let blankExpression = new Ast.Identifier(p.curToken, "blank")
+
+        new Ast.ReturnStatement(returnToken, blankExpression)
+
+    let parseStatement (p: ParserState) : Ast.Statement =
         match p.curToken.TokenType with 
-        | TokenType.LET -> parseLetStatement p
-        | _ -> parseLetStatement p
+        | TokenType.LET -> (parseLetStatement p :> Ast.Statement)
+        | TokenType.RETURN -> (parseReturnStatement p :> Ast.Statement)
+        | _ -> 
+            //TODO - figure something else out
+            (parseLetStatement p :> Ast.Statement)
 
     let createParser lexer =
         let firstToken = Lexer.nextToken lexer
         let secondToken = Lexer.nextToken lexer
-        let parser = { lexer = lexer; curToken = firstToken; peekToken = secondToken }
+
+        let parser = { lexer = lexer; curToken = firstToken; peekToken = secondToken; errors = new ResizeArray<string>() }
         parser
 
     let parseProgram (parser: ParserState) : Ast.Program =
@@ -68,7 +95,8 @@ module Parser
             nextToken parser
 
         let statementArray = list.ToArray()
-        { Statements = statementArray }
+
+        new Ast.Program(statementArray)
 
 
 
