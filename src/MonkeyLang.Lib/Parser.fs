@@ -1,12 +1,31 @@
 module Parser
     open Tokens
-    type ParserState = 
+
+    type ExprPrecedence =
+    | LOWEST = 1
+    | EQUALS = 2
+    | LESSGREATER = 3
+    | SUM = 4
+    | PRODUCT = 5
+    | PREFIX = 6
+    | CALL = 7
+
+    type prefixParse = ParserState -> Ast.Expression
+    and infixParse = Ast.Expression -> Ast.Expression
+    and ParserState = 
         {
             lexer : Lexer.LexerState
             mutable curToken : Tokens.Token
             mutable peekToken : Tokens.Token
             mutable errors : ResizeArray<string> //TODO - maybe change to option type??
+            prefixParseFns : System.Collections.Generic.Dictionary<TokenType, prefixParse>
+            infixParseFns : System.Collections.Generic.Dictionary<TokenType, infixParse>
         }
+
+    let registerPrefix p token func =
+        match p.prefixParseFns.ContainsKey token with
+        | true -> ()
+        | false -> p.prefixParseFns.Add(token, func)
 
     let nextToken (p: ParserState) =
         p.curToken <- p.peekToken
@@ -30,6 +49,9 @@ module Parser
         | false -> 
             peekError p t
             false
+
+    let parseIdentifier  p =
+        (new Ast.Identifier (p.curToken, p.curToken.Literal)) :> Ast.Expression
 
     let parseLetStatement (p: ParserState) =
         let letToken = p.curToken
@@ -69,19 +91,53 @@ module Parser
 
         new Ast.ReturnStatement(returnToken, blankExpression)
 
+    let parseExpression p precedence =
+        // match p.prefixParseFns.ContainsKey p.curToken.TokenType with
+        // | true -> 
+        //     let prefix = p.prefixParseFns[p.curToken.TokenType]
+        //     let leftExp = prefix()
+        //     Some leftExp
+        // | false -> None
+        //do this safely
+        let prefix = p.prefixParseFns.[p.curToken.TokenType]
+        prefix p
+
+    let parseExpressionStatement p =
+        let curToken = p.curToken
+        let expression = parseExpression p ExprPrecedence.LOWEST
+
+        let statement = new Ast.ExpressionStatement (curToken, expression)
+
+        if peekTokenIs p TokenType.SEMICOLON then nextToken p
+
+        statement
+
     let parseStatement (p: ParserState) : Ast.Statement =
         match p.curToken.TokenType with 
         | TokenType.LET -> (parseLetStatement p :> Ast.Statement)
         | TokenType.RETURN -> (parseReturnStatement p :> Ast.Statement)
         | _ -> 
             //TODO - figure something else out
-            (parseLetStatement p :> Ast.Statement)
+            (parseExpressionStatement p :> Ast.Statement)
 
     let createParser lexer =
         let firstToken = Lexer.nextToken lexer
         let secondToken = Lexer.nextToken lexer
 
-        let parser = { lexer = lexer; curToken = firstToken; peekToken = secondToken; errors = new ResizeArray<string>() }
+        //register parse functions
+        let prefixFns = new System.Collections.Generic.Dictionary<TokenType, prefixParse>()
+        prefixFns.Add(TokenType.IDENT, parseIdentifier)
+
+        let parser = 
+            { 
+                lexer = lexer
+                curToken = firstToken
+                peekToken = secondToken
+                errors = new ResizeArray<string>()
+                prefixParseFns = prefixFns
+                infixParseFns = new System.Collections.Generic.Dictionary<TokenType, infixParse>()
+            }
+
         parser
 
     let parseProgram (parser: ParserState) : Ast.Program =

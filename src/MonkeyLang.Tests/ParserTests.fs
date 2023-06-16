@@ -12,6 +12,15 @@ let canDowncastToReturnStatement (s: Ast.Statement) =
     match s with 
     | :? Ast.ReturnStatement as rs -> true
     | _ -> false
+let canDowncastToExpressionStatement (s: Ast.Statement) =
+    match s with
+    | :? Ast.ExpressionStatement as es -> true
+    | _ -> false
+let isIdentifier (e : Ast.Expression) =
+    match e with
+    | :? Ast.Identifier as id -> true
+    | _ -> false
+
 
 let testLetStatement (expected: string) (s: Ast.Statement) =
     Assert.Equal(s.TokenLiteral(), "let")
@@ -129,7 +138,30 @@ return 993322;"
 
     let expectedStatements = [| "x"; "y"; "foobar" |]
 
-    Assert.Equal (3, program.Statements.Length)
+    Assert.Equal (3, program.statements.Length)
 
-    Array.zip expectedStatements program.Statements
+    Array.zip expectedStatements program.statements
         |> Array.map (fun (e, a) -> testReturnStatement e a)
+
+[<Fact>]
+let ``Can test identifier expression`` () =
+    let input = "foobar;"
+
+    let lexer = createLexer input
+    let parser = createParser lexer
+    let program = parseProgram parser
+
+    AssertNoParseErrors parser
+
+    Assert.Equal(1, program.statements.Length)
+
+    Assert.True(canDowncastToExpressionStatement(program.statements.[0]))
+
+    let es = program.statements.[0] :?> Ast.ExpressionStatement
+
+    Assert.True(isIdentifier(es.expression))
+
+    let identifier = (es.expression :?> Ast.Identifier)
+
+    Assert.Equal("foobar", identifier.value)
+    Assert.Equal("foobar", es.expression.TokenLiteral())
