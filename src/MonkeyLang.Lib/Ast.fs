@@ -33,6 +33,15 @@ module Ast
             member this.expressionNode () = ()
             member this.Str () = value
 
+    type IntegerLiteral(token: Tokens.Token, value: int64) =
+        member this.token = token
+        member this.value = value
+        interface Expression with
+            member this.TokenLiteral () = token.Literal
+            member this.expressionNode () = ()
+            member this.Str () = sprintf "%d" value
+
+    
     type LetStatement(token: Tokens.Token, name: Identifier, value: Expression) =
         member this.token = token
         member this.name = name

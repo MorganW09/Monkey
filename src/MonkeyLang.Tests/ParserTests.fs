@@ -20,6 +20,11 @@ let isIdentifier (e : Ast.Expression) =
     match e with
     | :? Ast.Identifier as id -> true
     | _ -> false
+let isInteger (e : Ast.Expression) =
+    match e with
+    | :? Ast.IntegerLiteral as id -> true
+    | _ -> false
+
 
 
 let testLetStatement (expected: string) (s: Ast.Statement) =
@@ -165,3 +170,29 @@ let ``Can test identifier expression`` () =
 
     Assert.Equal("foobar", identifier.value)
     Assert.Equal("foobar", es.expression.TokenLiteral())
+
+[<Fact>]
+let ``Can test integer expression`` () =
+    let input = "5;"
+
+    let lexer = createLexer input
+    let parser = createParser lexer
+    let program = parseProgram parser
+
+    AssertNoParseErrors parser
+
+    Assert.Equal(1, program.statements.Length)
+
+    Assert.True(canDowncastToExpressionStatement(program.statements.[0]))
+
+    let es = program.statements.[0] :?> Ast.ExpressionStatement
+
+    Assert.True(isInteger(es.expression))
+
+    let integer = (es.expression :?> Ast.IntegerLiteral)
+
+    Assert.Equal(5L, integer.value)
+    Assert.Equal("5", es.expression.TokenLiteral())
+
+
+

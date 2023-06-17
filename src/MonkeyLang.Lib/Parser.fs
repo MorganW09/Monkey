@@ -102,6 +102,9 @@ module Parser
         let prefix = p.prefixParseFns.[p.curToken.TokenType]
         prefix p
 
+    let parseIntegerLiteral p =
+        //more stuff for integer literal
+
     let parseExpressionStatement p =
         let curToken = p.curToken
         let expression = parseExpression p ExprPrecedence.LOWEST
