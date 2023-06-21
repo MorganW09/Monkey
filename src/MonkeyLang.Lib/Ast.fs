@@ -41,6 +41,32 @@ module Ast
             member this.expressionNode () = ()
             member this.Str () = sprintf "%d" value
 
+    type PrefixExpression(token: Tokens.Token, operator: string, right: Expression) =
+        member this.token = token
+        member this.operator = operator
+        member this.right = right
+        interface Expression with
+            member this.TokenLiteral () = token.Literal
+            member this.expressionNode () = ()
+            member this.Str () = 
+                let rightStr = this.right.Str()
+
+                sprintf "(%s%s)" this.operator rightStr
+
+    type InfixExpression(token: Tokens.Token, left: Expression, operator: string, right: Expression) =
+        member this.token = token
+        member this.left = left
+        member this.operator = operator
+        member this.right = right
+        interface Expression with
+            member this.TokenLiteral () = token.Literal
+            member this.expressionNode () = ()
+            member this.Str () = 
+                let leftStr = this.left.Str()
+                let rightStr = this.right.Str()
+
+                sprintf "(%s %s %s)"  leftStr this.operator rightStr
+
     
     type LetStatement(token: Tokens.Token, name: Identifier, value: Expression) =
         member this.token = token
@@ -68,4 +94,3 @@ module Ast
             member this.TokenLiteral () = token.Literal
             member this.statementNode () = ()
             member this.Str () = this.expression.Str()
-

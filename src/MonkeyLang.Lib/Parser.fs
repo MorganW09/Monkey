@@ -10,8 +10,20 @@ module Parser
     | PREFIX = 6
     | CALL = 7
 
-    type prefixParse = ParserState -> Ast.Expression
-    and infixParse = Ast.Expression -> Ast.Expression
+    let PrecedenceMap =
+        Map.empty
+            .Add(TokenType.EQ, ExprPrecedence.EQUALS)
+            .Add(TokenType.NOT_EQ, ExprPrecedence.EQUALS)
+            .Add(TokenType.LT, ExprPrecedence.LESSGREATER)
+            .Add(TokenType.GT, ExprPrecedence.LESSGREATER)
+            .Add(TokenType.PLUS, ExprPrecedence.SUM)
+            .Add(TokenType.MINUS, ExprPrecedence.SUM)
+            .Add(TokenType.SLASH, ExprPrecedence.PRODUCT)
+            .Add(TokenType.ASTERISK, ExprPrecedence.PRODUCT)
+
+    type prefixParse = ParserState -> Ast.Expression option
+    and infixParse = ParserState -> Ast.Expression -> Ast.Expression option
+
     and ParserState = 
         {
             lexer : Lexer.LexerState
@@ -41,6 +53,20 @@ module Parser
         let msg = sprintf "expected next token to be %s, got %s instead" (t.ToString()) (p.peekToken.TokenType.ToString())
         p.errors.Add(msg)
 
+    let getTokenPrecedence tokenType =
+        match PrecedenceMap.ContainsKey tokenType with
+        | true ->
+            PrecedenceMap.[tokenType]
+            //precedence
+        | false -> 
+            ExprPrecedence.LOWEST
+
+    let peekPrecedence p =
+        getTokenPrecedence p.peekToken.TokenType
+
+    let curPrecedence p =
+        getTokenPrecedence p.curToken.TokenType
+
     let expectPeek (p: ParserState) (t: TokenType) =
         match peekTokenIs p t with
         | true -> 
@@ -49,9 +75,6 @@ module Parser
         | false -> 
             peekError p t
             false
-
-    let parseIdentifier  p =
-        (new Ast.Identifier (p.curToken, p.curToken.Literal)) :> Ast.Expression
 
     let parseLetStatement (p: ParserState) =
         let letToken = p.curToken
@@ -92,44 +115,109 @@ module Parser
         new Ast.ReturnStatement(returnToken, blankExpression)
 
     let parseExpression p precedence =
-        // match p.prefixParseFns.ContainsKey p.curToken.TokenType with
-        // | true -> 
-        //     let prefix = p.prefixParseFns[p.curToken.TokenType]
-        //     let leftExp = prefix()
-        //     Some leftExp
-        // | false -> None
+        match p.prefixParseFns.ContainsKey p.curToken.TokenType with
+        | true -> 
+            let prefix = p.prefixParseFns.[p.curToken.TokenType]
+            let mutable leftExp = prefix p
+
+            while not (peekTokenIs p TokenType.SEMICOLON) && precedence < peekPrecedence p do
+                
+                leftExp <- match p.infixParseFns.ContainsKey p.peekToken.TokenType && leftExp.IsSome with
+                            | true ->
+                                let infixFn = p.infixParseFns.[p.peekToken.TokenType]
+                                nextToken p
+                                infixFn p leftExp.Value
+                            | _ -> leftExp
+            leftExp
+        | false -> 
+            p.errors.Add("no prefix parse function for ! found")
+            None
         //do this safely
-        let prefix = p.prefixParseFns.[p.curToken.TokenType]
-        prefix p
+        // let prefix = p.prefixParseFns.[p.curToken.TokenType]
+        // prefix p
+
+    let parseIdentifier  p =
+        let identifier = new Ast.Identifier (p.curToken, p.curToken.Literal)
+        let expr = identifier :> Ast.Expression
+        Some expr
 
     let parseIntegerLiteral p =
-        //more stuff for integer literal
+        //more stuff for integer literal        
+        match System.Int64.TryParse p.curToken.Literal with
+        | true, l ->
+            let intLiteral = new Ast.IntegerLiteral(p.curToken, l)
+            let expr = intLiteral :> Ast.Expression
+            Some expr
+        | _ -> 
+            let errorMsg = sprintf "could not parse %s as integer" p.curToken.Literal
+            p.errors.Add(errorMsg)
+            None
+    
+    let parsePrefixExpression p =
+        let curToken = p.curToken
+
+        nextToken p
+
+        match parseExpression p ExprPrecedence.PREFIX with
+        | Some expr ->
+            let prefix = new Ast.PrefixExpression(curToken, curToken.Literal, expr)
+            Some (prefix :> Ast.Expression)
+        | None -> None
+
+    let parseInfixExpression p left =
+        let curToken = p.curToken
+
+        let precedence = curPrecedence p
+
+        nextToken p
+
+        match parseExpression p precedence with
+        | Some right ->
+            let infix = new Ast.InfixExpression(curToken, left, curToken.Literal, right)
+            Some (infix :> Ast.Expression)
+        | None -> None
 
     let parseExpressionStatement p =
         let curToken = p.curToken
-        let expression = parseExpression p ExprPrecedence.LOWEST
+        
+        match parseExpression p ExprPrecedence.LOWEST with
+        | Some expression ->
+            let statement = new Ast.ExpressionStatement (curToken, expression)
 
-        let statement = new Ast.ExpressionStatement (curToken, expression)
+            if peekTokenIs p TokenType.SEMICOLON then nextToken p
 
-        if peekTokenIs p TokenType.SEMICOLON then nextToken p
+            Some (statement :> Ast.Statement)
+        | None -> None
 
-        statement
-
-    let parseStatement (p: ParserState) : Ast.Statement =
+    let parseStatement (p: ParserState) =
         match p.curToken.TokenType with 
-        | TokenType.LET -> (parseLetStatement p :> Ast.Statement)
-        | TokenType.RETURN -> (parseReturnStatement p :> Ast.Statement)
+        | TokenType.LET -> Some (parseLetStatement p :> Ast.Statement)
+        | TokenType.RETURN -> Some (parseReturnStatement p :> Ast.Statement)
         | _ -> 
             //TODO - figure something else out
-            (parseExpressionStatement p :> Ast.Statement)
+            (parseExpressionStatement p)
 
     let createParser lexer =
         let firstToken = Lexer.nextToken lexer
         let secondToken = Lexer.nextToken lexer
 
-        //register parse functions
+        //register prefix parse functions
         let prefixFns = new System.Collections.Generic.Dictionary<TokenType, prefixParse>()
         prefixFns.Add(TokenType.IDENT, parseIdentifier)
+        prefixFns.Add(TokenType.INT, parseIntegerLiteral)
+        prefixFns.Add(TokenType.BANG, parsePrefixExpression)
+        prefixFns.Add(TokenType.MINUS, parsePrefixExpression)
+
+        //regist infix parse functions
+        let infixFns = new System.Collections.Generic.Dictionary<TokenType, infixParse>()
+        infixFns.Add(TokenType.PLUS, parseInfixExpression)
+        infixFns.Add(TokenType.MINUS, parseInfixExpression)
+        infixFns.Add(TokenType.SLASH, parseInfixExpression)
+        infixFns.Add(TokenType.ASTERISK, parseInfixExpression)
+        infixFns.Add(TokenType.EQ, parseInfixExpression)
+        infixFns.Add(TokenType.NOT_EQ, parseInfixExpression)
+        infixFns.Add(TokenType.LT, parseInfixExpression)
+        infixFns.Add(TokenType.GT, parseInfixExpression)
 
         let parser = 
             { 
@@ -138,7 +226,7 @@ module Parser
                 peekToken = secondToken
                 errors = new ResizeArray<string>()
                 prefixParseFns = prefixFns
-                infixParseFns = new System.Collections.Generic.Dictionary<TokenType, infixParse>()
+                infixParseFns = infixFns
             }
 
         parser
@@ -147,9 +235,9 @@ module Parser
         let list = new ResizeArray<Ast.Statement>()
 
         while not (curTokenIs parser TokenType.EOF) do
-            let statement = parseStatement parser
-
-            list.Add(statement)
+            match parseStatement parser with
+            | Some statement -> list.Add(statement)
+            | None -> ()
 
             nextToken parser
 

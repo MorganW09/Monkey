@@ -24,8 +24,14 @@ let isInteger (e : Ast.Expression) =
     match e with
     | :? Ast.IntegerLiteral as id -> true
     | _ -> false
-
-
+let canDowncastToPrefixExpression (s: Ast.Expression) =
+    match s with
+    | :? Ast.PrefixExpression as pe -> true
+    | _ -> false
+let canDowncastToInfixExpression (s: Ast.Expression) =
+    match s with
+    | :? Ast.InfixExpression as ie -> true
+    | _ -> false
 
 let testLetStatement (expected: string) (s: Ast.Statement) =
     Assert.Equal(s.TokenLiteral(), "let")
@@ -53,6 +59,15 @@ let AssertNoParseErrors (p: ParserState) =
     //TODO - maybe include parser errors in the output
     //TODO - maybe print to stderr
     Assert.Equal(0, p.errors.Count)
+
+let testIntegerLiteral (il : Ast.Expression) (value) =
+    Assert.True(isInteger il)
+
+    let integerLiteral = il :?> Ast.IntegerLiteral
+
+    Assert.Equal(integerLiteral.value, value)
+
+    Assert.Equal(il.TokenLiteral(), (sprintf "%d" value))
 
 [<Fact>]
 let ``Can Parse Let Statement`` () =
@@ -194,5 +209,74 @@ let ``Can test integer expression`` () =
     Assert.Equal(5L, integer.value)
     Assert.Equal("5", es.expression.TokenLiteral())
 
+//TODO - maybe turn this into a theory, check book
+[<Fact>]
+let ``Can test prefix expression parsing`` () =
+    let input = "!5"
 
+    let lexer = createLexer input
+    let parser = createParser lexer
+    let program = parseProgram parser
 
+    AssertNoParseErrors parser
+
+    Assert.Equal(1, program.statements.Length)
+
+    Assert.True(canDowncastToExpressionStatement(program.statements.[0]), "cannot downcast to expression statement")
+
+    let es = program.statements.[0] :?> Ast.ExpressionStatement
+
+    Assert.True(canDowncastToPrefixExpression(es.expression), "cannot downcast to prefix expression")
+
+    let pe = es.expression :?> Ast.PrefixExpression
+    
+    Assert.Equal("!", pe.operator)
+    testIntegerLiteral pe.right 5L
+
+[<Theory>]
+[<InlineData("5 + 6;", 5, "+", 6)>]
+[<InlineData("5 - 6;", 5, "-", 6)>]
+[<InlineData("5 * 6;", 5, "*", 6)>]
+[<InlineData("5 / 6;", 5, "/", 6)>]
+[<InlineData("5 > 6;", 5, ">", 6)>]
+[<InlineData("5 < 6;", 5, "<", 6)>]
+[<InlineData("5 == 6;", 5, "==", 6)>]
+[<InlineData("5 != 6;", 5, "!=", 6)>]
+(*
+
+{"5 + 5;", 5, "+", 5},
+{"5 - 5;", 5, "-", 5},
+{"5 * 5;", 5, "*", 5},
+{"5 / 5;", 5, "/", 5},
+{"5 > 5;", 5, ">", 5},
+{"5 < 5;", 5, "<", 5},
+{"5 == 5;", 5, "==", 5},
+{"5 != 5;", 5, "!=", 5},
+
+*)
+let ``Can test integer infix operations`` input exLeft expectedOp exRight =
+    let lexer = createLexer input
+    let parser = createParser lexer
+    let program = parseProgram parser
+
+    AssertNoParseErrors parser
+
+    Assert.Equal(1, program.statements.Length)
+
+    Assert.True(canDowncastToExpressionStatement(program.statements.[0]), "cannot downcast to expression statement")
+
+    let es = program.statements.[0] :?> Ast.ExpressionStatement
+
+    Assert.True(canDowncastToInfixExpression(es.expression), "cannot downcast to prefix expression")
+
+    let ie = es.expression :?> Ast.InfixExpression
+
+    
+    testIntegerLiteral ie.left exLeft
+    Assert.Equal(expectedOp, ie.operator)
+    testIntegerLiteral ie.right exRight
+    //test left value matches 5
+
+    //test operator match
+
+    //test right value matches 6
