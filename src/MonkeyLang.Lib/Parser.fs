@@ -130,7 +130,8 @@ module Parser
                             | _ -> leftExp
             leftExp
         | false -> 
-            p.errors.Add("no prefix parse function for ! found")
+            let tokenType = p.curToken.TokenType.ToString()
+            p.errors.Add(sprintf "no prefix parse function for %s found" tokenType)
             None
         //do this safely
         // let prefix = p.prefixParseFns.[p.curToken.TokenType]
@@ -156,6 +157,7 @@ module Parser
     let parseBoolean p =
         let boolean = new Ast.Boolean (p.curToken, curTokenIs p TokenType.TRUE)
         Some (boolean :> Ast.Expression)
+
     
     let parsePrefixExpression p =
         let curToken = p.curToken
@@ -210,6 +212,55 @@ module Parser
             //TODO - figure something else out
             (parseExpressionStatement p)
 
+    let parseBlockStatement p =
+        let curToken = p.curToken
+
+        let statements = new ResizeArray<Ast.Statement>()
+
+        nextToken p
+
+        while not (curTokenIs p TokenType.RBRACE) && not (curTokenIs p TokenType.EOF) do
+            match parseStatement p with
+            | Some statement -> statements.Add(statement)
+            | None -> ()
+
+            nextToken p
+        
+        let statementArray = statements.ToArray()
+
+        let block = new Ast.BlockStatement(curToken, statementArray)
+
+        block
+
+    let parseIfExpression p =
+        let curToken = p.curToken
+
+        if not (expectPeek p TokenType.LPAREN) then None
+        else
+            nextToken p
+
+            let condition = parseExpression p ExprPrecedence.LOWEST
+
+            let notRParen = not (expectPeek p TokenType.RPAREN)
+            let notLBrace = not (expectPeek p TokenType.LBRACE)
+
+            if notRParen || notLBrace || condition.IsNone then None
+            else 
+                let consequence = parseBlockStatement p
+
+                if peekTokenIs p TokenType.ELSE then
+                    nextToken p
+
+                    if not (expectPeek p TokenType.LBRACE) then
+                        None
+                    else
+                        let alternative = parseBlockStatement p
+
+                        let ifExpr = new Ast.IfExpression(curToken, condition.Value, consequence, Some alternative)
+                        Some (ifExpr :> Ast.Expression)
+                else
+                    let ifExpr = new Ast.IfExpression(curToken, condition.Value, consequence, None)
+                    Some (ifExpr :> Ast.Expression)
     let createParser lexer =
         let firstToken = Lexer.nextToken lexer
         let secondToken = Lexer.nextToken lexer
@@ -223,6 +274,7 @@ module Parser
         prefixFns.Add(TokenType.TRUE, parseBoolean)
         prefixFns.Add(TokenType.FALSE, parseBoolean)
         prefixFns.Add(TokenType.LPAREN, parseGroupedExpression)
+        prefixFns.Add(TokenType.IF, parseIfExpression)
 
         //regist infix parse functions
         let infixFns = new System.Collections.Generic.Dictionary<TokenType, infixParse>()

@@ -36,6 +36,10 @@ let canDowncastToInfixExpression (s: Ast.Expression) =
     match s with
     | :? Ast.InfixExpression as ie -> true
     | _ -> false
+let canDowncastToIfExpression (s: Ast.Expression) =
+    match s with
+    | :? Ast.IfExpression as ie -> true
+    | _ -> false
 
 let testLetStatement (expected: string) (s: Ast.Statement) =
     Assert.Equal(s.TokenLiteral(), "let")
@@ -62,7 +66,11 @@ let AssertNoParseErrors (p: ParserState) =
     //if errors, maybe print to err out
     //TODO - maybe include parser errors in the output
     //TODO - maybe print to stderr
-    Assert.Equal(0, p.errors.Count)
+    let errorMessage =  if p.errors.Count > 0 then 
+                            let error = p.errors.ToArray() |> Array.reduce (fun a b -> sprintf "%s\n%s" a b)
+                            error
+                        else ""
+    Assert.True(0 = p.errors.Count, errorMessage)
 
 let testIntegerLiteral (il : Ast.Expression) (value) =
     Assert.True(isInteger il)
@@ -105,11 +113,11 @@ let testStrInfixExpression (ie : Ast.Expression) (left) (operator) (right) =
 
     let infixExpr = ie :?> Ast.InfixExpression
 
-    testIntegerLiteral infixExpr.left left
+    testIdentifier infixExpr.left left
 
     Assert.Equal(operator, infixExpr.operator)
 
-    testIntegerLiteral infixExpr.right right
+    testIdentifier infixExpr.right right
 
 
 
@@ -395,4 +403,72 @@ let ``Can test boolean infix expressions`` input expectedLeft expectedOp expecte
     Assert.Equal(expectedOp, infixExpr.operator)
     testBoolean infixExpr.right expectedRight
 
-//page 86
+[<Fact>]
+let ``Can test if expression`` () =
+    let input = "if (x < y) { x }"
+    
+    let lexer = createLexer input
+    let parser = createParser lexer
+    let program = parseProgram parser
+
+    AssertNoParseErrors parser
+
+    Assert.Equal(1, program.statements.Length)
+
+    Assert.True(canDowncastToExpressionStatement(program.statements.[0]))
+
+    let es = program.statements.[0] :?> Ast.ExpressionStatement
+
+    Assert.True(canDowncastToIfExpression(es.expression))
+
+    let ifExpr = es.expression :?> Ast.IfExpression
+
+    testStrInfixExpression ifExpr.condition "x" "<" "y"
+
+    Assert.Equal(1, ifExpr.consequence.statements.Length)
+
+    let consequence = ifExpr.consequence.statements.[0]
+    Assert.True(canDowncastToExpressionStatement(consequence))
+
+    let conExpr = consequence :?> Ast.ExpressionStatement
+
+    testIdentifier conExpr.expression "x"
+
+    Assert.True(ifExpr.alternative.IsNone)
+
+//test if/else expression
+
+[<Fact>]
+let ``Can test if else expression`` () =
+    let input = "if (x < y) { x } else { y }"
+    
+    let lexer = createLexer input
+    let parser = createParser lexer
+    let program = parseProgram parser
+
+    AssertNoParseErrors parser
+
+    Assert.Equal(1, program.statements.Length)
+
+    Assert.True(canDowncastToExpressionStatement(program.statements.[0]))
+
+    let es = program.statements.[0] :?> Ast.ExpressionStatement
+
+    Assert.True(canDowncastToIfExpression(es.expression))
+
+    let ifExpr = es.expression :?> Ast.IfExpression
+
+    Assert.True(ifExpr.alternative.IsSome)
+
+    let alternative = ifExpr.alternative.Value
+
+    Assert.Equal(1, alternative.statements.Length)
+
+    let alternativeStatement = alternative.statements.[0]
+    Assert.True(canDowncastToExpressionStatement(alternativeStatement))
+
+    let altExpr = alternativeStatement :?> Ast.ExpressionStatement
+
+    testIdentifier altExpr.expression "y"
+
+//book page 91

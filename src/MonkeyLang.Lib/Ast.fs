@@ -102,3 +102,34 @@ module Ast
             member this.TokenLiteral () = this.token.Literal
             member this.expressionNode () = ()
             member this.Str () = this.token.Literal
+
+    type BlockStatement(token: Tokens.Token, statements: Statement[]) =
+        member this.token = token
+        member this.statements = statements
+        interface Statement with
+            member this.TokenLiteral () = this.token.Literal
+            member this.statementNode () = ()                
+            member this.Str () =
+                this.statements
+                    |> Array.map (fun s -> s.Str())
+                    |> Array.reduce (fun a b -> a + b)
+
+    type IfExpression(token: Tokens.Token, condition: Expression, consequence: BlockStatement, alternative: BlockStatement option) =
+        member this.token = token
+        member this.condition = condition
+        member this.consequence = consequence
+        member this.alternative = alternative
+        interface Expression with
+            member this.TokenLiteral () = this.token.Literal
+            member this.expressionNode () = ()
+            member this.Str () = 
+                let ifStr = this.condition.Str()
+                let consequenceStr = (this.consequence :> Statement).Str()
+
+                let firstStr = sprintf "if%s %s" ifStr consequenceStr
+
+                match this.alternative with
+                | Some alt ->
+                    let altStr = (alt :> Statement).Str()
+                    sprintf "%selse %s" firstStr altStr
+                | None -> firstStr
