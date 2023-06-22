@@ -268,6 +268,30 @@ let ``Can test prefix expression parsing`` () =
     testIntegerLiteral pe.right 5L
 
 [<Theory>]
+[<InlineData("!true;", "!", true)>]
+[<InlineData("!false;", "!", false)>]
+let ``Can test boolean prefix expressions`` (input: string) (exOp: string) (exBoolean: bool) =
+
+    let lexer = createLexer input
+    let parser = createParser lexer
+    let program = parseProgram parser
+
+    AssertNoParseErrors parser
+
+    Assert.Equal(1, program.statements.Length)
+
+    Assert.True(canDowncastToExpressionStatement(program.statements.[0]), "cannot downcast to expression statement")
+
+    let es = program.statements.[0] :?> Ast.ExpressionStatement
+
+    Assert.True(canDowncastToPrefixExpression(es.expression), "cannot downcast to prefix expression")
+
+    let pe = es.expression :?> Ast.PrefixExpression
+    
+    Assert.Equal("!", pe.operator)
+    testBoolean pe.right exBoolean
+
+[<Theory>]
 [<InlineData("5 + 6;", 5, "+", 6)>]
 [<InlineData("5 - 6;", 5, "-", 6)>]
 [<InlineData("5 * 6;", 5, "*", 6)>]
@@ -314,6 +338,11 @@ let ``Can test integer infix operations`` input exLeft expectedOp exRight =
 [<InlineData("false", "false")>]
 [<InlineData("3 > 5 == false", "((3 > 5) == false)")>]
 [<InlineData("3 < 5 == true", "((3 < 5) == true)")>]
+[<InlineData("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)")>]
+[<InlineData("(5 + 5) * 2","((5 + 5) * 2)")>]
+[<InlineData("2 / (5 + 5)","(2 / (5 + 5))")>]
+[<InlineData("-(5 + 5)","(-(5 + 5))")>]
+[<InlineData("!(true == true)","(!(true == true))")>]
 let ``Can test operator precedence`` input expected =
     let lexer = createLexer input
     let parser = createParser lexer
@@ -341,4 +370,29 @@ let ``Can test boolean expression`` () =
 
     testBoolean es.expression true
 
-//implement something for TestParsingInfixExpressions on page 83 in book
+[<Theory>]
+[<InlineData("true == true", true, "==", true)>]
+[<InlineData("true != false", true, "!=", false)>]
+[<InlineData("false == false", false, "==", false)>]
+let ``Can test boolean infix expressions`` input expectedLeft expectedOp expectedRight =
+    let lexer = createLexer input
+    let parser = createParser lexer
+    let program = parseProgram parser
+
+    AssertNoParseErrors parser
+
+    Assert.Equal(1, program.statements.Length)
+
+    Assert.True(canDowncastToExpressionStatement(program.statements.[0]))
+
+    let es = program.statements.[0] :?> Ast.ExpressionStatement
+
+    Assert.True(canDowncastToInfixExpression(es.expression))
+
+    let infixExpr = es.expression :?> Ast.InfixExpression
+    
+    testBoolean infixExpr.left expectedLeft
+    Assert.Equal(expectedOp, infixExpr.operator)
+    testBoolean infixExpr.right expectedRight
+
+//page 86

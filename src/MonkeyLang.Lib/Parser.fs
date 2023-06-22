@@ -193,6 +193,15 @@ module Parser
             Some (statement :> Ast.Statement)
         | None -> None
 
+    let parseGroupedExpression p =
+        nextToken p
+
+        match parseExpression p ExprPrecedence.LOWEST with
+        | Some expression ->
+            if not (expectPeek p TokenType.RPAREN) then None
+            else Some expression
+        | None -> None
+
     let parseStatement (p: ParserState) =
         match p.curToken.TokenType with 
         | TokenType.LET -> Some (parseLetStatement p :> Ast.Statement)
@@ -213,6 +222,7 @@ module Parser
         prefixFns.Add(TokenType.MINUS, parsePrefixExpression)
         prefixFns.Add(TokenType.TRUE, parseBoolean)
         prefixFns.Add(TokenType.FALSE, parseBoolean)
+        prefixFns.Add(TokenType.LPAREN, parseGroupedExpression)
 
         //regist infix parse functions
         let infixFns = new System.Collections.Generic.Dictionary<TokenType, infixParse>()
