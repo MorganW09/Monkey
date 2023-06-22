@@ -47,7 +47,9 @@ module Lexer
         lowerCase || upperCase || underscore
 
     let canReadLetter(l: LexerState) =
-        isLetter(l.input.Chars(l.position + 1))
+        //ensure I can read next position
+        let canReadNextPosition = l.position + 1 < l.input.Length
+        canReadNextPosition && isLetter(l.input.Chars(l.position + 1))
 
     let readIdentifier(l: LexerState) =
         let pos = l.position

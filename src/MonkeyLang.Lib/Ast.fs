@@ -23,7 +23,7 @@ module Ast
             member this.Str () =
                 this.statements
                     |> Array.map (fun s -> s.Str())
-                    |> Array.reduce (fun a b -> a + "\n" + b)
+                    |> Array.reduce (fun a b -> a + b)
     
     type Identifier(token: Tokens.Token, value: string) =
         member this.token = token
@@ -94,3 +94,11 @@ module Ast
             member this.TokenLiteral () = token.Literal
             member this.statementNode () = ()
             member this.Str () = this.expression.Str()
+
+    type Boolean(token: Tokens.Token, value: bool) =
+        member this.token = token
+        member this.value = value
+        interface Expression with
+            member this.TokenLiteral () = this.token.Literal
+            member this.expressionNode () = ()
+            member this.Str () = this.token.Literal

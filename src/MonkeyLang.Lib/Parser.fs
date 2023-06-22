@@ -152,6 +152,10 @@ module Parser
             let errorMsg = sprintf "could not parse %s as integer" p.curToken.Literal
             p.errors.Add(errorMsg)
             None
+
+    let parseBoolean p =
+        let boolean = new Ast.Boolean (p.curToken, curTokenIs p TokenType.TRUE)
+        Some (boolean :> Ast.Expression)
     
     let parsePrefixExpression p =
         let curToken = p.curToken
@@ -207,6 +211,8 @@ module Parser
         prefixFns.Add(TokenType.INT, parseIntegerLiteral)
         prefixFns.Add(TokenType.BANG, parsePrefixExpression)
         prefixFns.Add(TokenType.MINUS, parsePrefixExpression)
+        prefixFns.Add(TokenType.TRUE, parseBoolean)
+        prefixFns.Add(TokenType.FALSE, parseBoolean)
 
         //regist infix parse functions
         let infixFns = new System.Collections.Generic.Dictionary<TokenType, infixParse>()

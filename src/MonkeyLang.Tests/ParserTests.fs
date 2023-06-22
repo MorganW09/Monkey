@@ -24,6 +24,10 @@ let isInteger (e : Ast.Expression) =
     match e with
     | :? Ast.IntegerLiteral as id -> true
     | _ -> false
+let isBoolean (e: Ast.Expression) =
+    match e with
+    | :? Ast.Boolean as b -> true
+    | _ -> false
 let canDowncastToPrefixExpression (s: Ast.Expression) =
     match s with
     | :? Ast.PrefixExpression as pe -> true
@@ -68,6 +72,46 @@ let testIntegerLiteral (il : Ast.Expression) (value) =
     Assert.Equal(integerLiteral.value, value)
 
     Assert.Equal(il.TokenLiteral(), (sprintf "%d" value))
+
+let testBoolean (il : Ast.Expression) (value) =
+    Assert.True(isBoolean il)
+
+    let boolean = il :?> Ast.Boolean
+
+    Assert.Equal(boolean.value, value)
+    Assert.Equal(il.TokenLiteral(), (sprintf "%b" value))
+
+let testIntInfixExpression (ie : Ast.Expression) (left) (operator) (right) =
+    Assert.True(canDowncastToInfixExpression ie)
+
+    let infixExpr = ie :?> Ast.InfixExpression
+
+    testIntegerLiteral infixExpr.left left
+
+    Assert.Equal(operator, infixExpr.operator)
+
+    testIntegerLiteral infixExpr.right right
+
+let testIdentifier (ie: Ast.Expression) (value) =
+    Assert.True(isIdentifier ie)
+    
+    let identifier = ie :?> Ast.Identifier
+
+    Assert.Equal(value, identifier.value)
+    Assert.Equal(value, ie.TokenLiteral())
+
+let testStrInfixExpression (ie : Ast.Expression) (left) (operator) (right) =
+    Assert.True(canDowncastToInfixExpression ie)
+
+    let infixExpr = ie :?> Ast.InfixExpression
+
+    testIntegerLiteral infixExpr.left left
+
+    Assert.Equal(operator, infixExpr.operator)
+
+    testIntegerLiteral infixExpr.right right
+
+
 
 [<Fact>]
 let ``Can Parse Let Statement`` () =
@@ -179,12 +223,7 @@ let ``Can test identifier expression`` () =
 
     let es = program.statements.[0] :?> Ast.ExpressionStatement
 
-    Assert.True(isIdentifier(es.expression))
-
-    let identifier = (es.expression :?> Ast.Identifier)
-
-    Assert.Equal("foobar", identifier.value)
-    Assert.Equal("foobar", es.expression.TokenLiteral())
+    testIdentifier es.expression "foobar"
 
 [<Fact>]
 let ``Can test integer expression`` () =
@@ -202,12 +241,7 @@ let ``Can test integer expression`` () =
 
     let es = program.statements.[0] :?> Ast.ExpressionStatement
 
-    Assert.True(isInteger(es.expression))
-
-    let integer = (es.expression :?> Ast.IntegerLiteral)
-
-    Assert.Equal(5L, integer.value)
-    Assert.Equal("5", es.expression.TokenLiteral())
+    testIntegerLiteral es.expression 5L
 
 //TODO - maybe turn this into a theory, check book
 [<Fact>]
@@ -242,18 +276,6 @@ let ``Can test prefix expression parsing`` () =
 [<InlineData("5 < 6;", 5, "<", 6)>]
 [<InlineData("5 == 6;", 5, "==", 6)>]
 [<InlineData("5 != 6;", 5, "!=", 6)>]
-(*
-
-{"5 + 5;", 5, "+", 5},
-{"5 - 5;", 5, "-", 5},
-{"5 * 5;", 5, "*", 5},
-{"5 / 5;", 5, "/", 5},
-{"5 > 5;", 5, ">", 5},
-{"5 < 5;", 5, "<", 5},
-{"5 == 5;", 5, "==", 5},
-{"5 != 5;", 5, "!=", 5},
-
-*)
 let ``Can test integer infix operations`` input exLeft expectedOp exRight =
     let lexer = createLexer input
     let parser = createParser lexer
@@ -271,12 +293,52 @@ let ``Can test integer infix operations`` input exLeft expectedOp exRight =
 
     let ie = es.expression :?> Ast.InfixExpression
 
-    
     testIntegerLiteral ie.left exLeft
     Assert.Equal(expectedOp, ie.operator)
     testIntegerLiteral ie.right exRight
-    //test left value matches 5
 
-    //test operator match
+[<Theory>]
+[<InlineData("-a * b;", "((-a) * b)")>]
+[<InlineData("!-a", "(!(-a))")>]
+[<InlineData("a + b + c", "((a + b) + c)")>]
+[<InlineData("a + b - c","((a + b) - c)")>]
+[<InlineData("a * b * c","((a * b) * c)")>]
+[<InlineData("a * b / c","((a * b) / c)")>]
+[<InlineData("a + b / c","(a + (b / c))")>]
+[<InlineData("a + b * c + d / e - f","(((a + (b * c)) + (d / e)) - f)")>]
+[<InlineData("3 + 4; -5 * 5","(3 + 4)((-5) * 5)")>]
+[<InlineData("5 > 4 == 3 < 4","((5 > 4) == (3 < 4))")>]
+[<InlineData("5 < 4 != 3 > 4","((5 < 4) != (3 > 4))")>]
+[<InlineData("3 + 4 * 5 == 3 * 1 + 4 * 5","((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))")>]
+[<InlineData("true", "true")>]
+[<InlineData("false", "false")>]
+[<InlineData("3 > 5 == false", "((3 > 5) == false)")>]
+[<InlineData("3 < 5 == true", "((3 < 5) == true)")>]
+let ``Can test operator precedence`` input expected =
+    let lexer = createLexer input
+    let parser = createParser lexer
+    let program = parseProgram parser
 
-    //test right value matches 6
+    AssertNoParseErrors parser
+
+    Assert.Equal(expected, (program :> Ast.Node).Str())
+
+[<Fact>]
+let ``Can test boolean expression`` () =
+    let input = "true;"
+
+    let lexer = createLexer input
+    let parser = createParser lexer
+    let program = parseProgram parser
+
+    AssertNoParseErrors parser
+
+    Assert.Equal(1, program.statements.Length)
+
+    Assert.True(canDowncastToExpressionStatement(program.statements.[0]))
+
+    let es = program.statements.[0] :?> Ast.ExpressionStatement
+
+    testBoolean es.expression true
+
+//implement something for TestParsingInfixExpressions on page 83 in book
