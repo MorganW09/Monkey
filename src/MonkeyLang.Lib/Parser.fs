@@ -130,8 +130,7 @@ module Parser
                             | _ -> leftExp
             leftExp
         | false -> 
-            let tokenType = p.curToken.TokenType.ToString()
-            p.errors.Add(sprintf "no prefix parse function for %s found" tokenType)
+            p.errors.Add(sprintf "no prefix parse function for %s found" p.curToken.Literal)
             None
         //do this safely
         // let prefix = p.prefixParseFns.[p.curToken.TokenType]
@@ -261,6 +260,47 @@ module Parser
                 else
                     let ifExpr = new Ast.IfExpression(curToken, condition.Value, consequence, None)
                     Some (ifExpr :> Ast.Expression)
+
+    let parseFunctionParameters p =
+        let identifiers = new ResizeArray<Ast.Identifier>()
+
+        if peekTokenIs p TokenType.RPAREN then
+            nextToken p
+            identifiers.ToArray()
+        else
+            nextToken p
+
+            let ident = new Ast.Identifier(p.curToken, p.curToken.Literal)
+            identifiers.Add(ident)
+
+            while peekTokenIs p TokenType.COMMA do
+                nextToken p
+                nextToken p
+                let iden = new Ast.Identifier(p.curToken, p.curToken.Literal)
+                identifiers.Add(iden)
+            
+            if not (expectPeek p TokenType.RPAREN) then
+                Array.empty<Ast.Identifier>
+            else identifiers.ToArray()
+
+    let parseFunctionLiteral p =
+        let curToken = p.curToken
+
+        if not (expectPeek p TokenType.LPAREN) then
+            None
+        else
+
+            let parameters = parseFunctionParameters p
+
+            if not (expectPeek p TokenType.LBRACE) then
+                None
+            else
+                let body = parseBlockStatement p
+
+                let fnLit = new Ast.FunctionLiteral(curToken, parameters, body)
+
+                Some (fnLit :> Ast.Expression)
+
     let createParser lexer =
         let firstToken = Lexer.nextToken lexer
         let secondToken = Lexer.nextToken lexer
@@ -275,6 +315,7 @@ module Parser
         prefixFns.Add(TokenType.FALSE, parseBoolean)
         prefixFns.Add(TokenType.LPAREN, parseGroupedExpression)
         prefixFns.Add(TokenType.IF, parseIfExpression)
+        prefixFns.Add(TokenType.FUNCTION, parseFunctionLiteral)
 
         //regist infix parse functions
         let infixFns = new System.Collections.Generic.Dictionary<TokenType, infixParse>()
@@ -304,7 +345,8 @@ module Parser
 
         while not (curTokenIs parser TokenType.EOF) do
             match parseStatement parser with
-            | Some statement -> list.Add(statement)
+            | Some statement -> 
+                list.Add(statement)
             | None -> ()
 
             nextToken parser

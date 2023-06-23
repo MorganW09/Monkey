@@ -133,3 +133,19 @@ module Ast
                     let altStr = (alt :> Statement).Str()
                     sprintf "%selse %s" firstStr altStr
                 | None -> firstStr
+    
+    type FunctionLiteral(token: Tokens.Token, parameters: Identifier[], body: BlockStatement) =
+        member this.token = token
+        member this.parameters = parameters
+        member this.body = body
+        interface Expression with
+            member this.TokenLiteral () = this.token.Literal
+            member this.expressionNode () = ()
+            member this.Str () = 
+                let paraStr = 
+                    this.parameters
+                        |> Array.map (fun s -> (s :> Expression).Str())
+                        |> Array.reduce (fun a b -> sprintf "%s, %s" a b)
+                
+                let bodyStr = (this.body :> Statement).Str()
+                sprintf "%s (%s) %s" this.token.Literal paraStr bodyStr

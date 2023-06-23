@@ -40,6 +40,10 @@ let canDowncastToIfExpression (s: Ast.Expression) =
     match s with
     | :? Ast.IfExpression as ie -> true
     | _ -> false
+let canDowncastToFunctionLiteral (s: Ast.Expression) =
+    match s with
+    | :? Ast.FunctionLiteral as fl -> true
+    | _ -> false
 
 let testLetStatement (expected: string) (s: Ast.Statement) =
     Assert.Equal(s.TokenLiteral(), "let")
@@ -471,4 +475,71 @@ let ``Can test if else expression`` () =
 
     testIdentifier altExpr.expression "y"
 
-//book page 91
+[<Fact>]
+let ``CanTestFunctionalLiteralParsing`` () =
+    let input = "fn(x, y) { x + y; }"
+    
+    let lexer = createLexer input
+    let parser = createParser lexer
+    let program = parseProgram parser
+    
+    Assert.Equal(1, program.statements.Length)
+
+    AssertNoParseErrors parser
+
+
+    Assert.True(canDowncastToExpressionStatement(program.statements.[0]))
+
+    let es = program.statements.[0] :?> Ast.ExpressionStatement
+
+    Assert.True(canDowncastToFunctionLiteral es.expression)
+
+    let fnLit = es.expression :?> Ast.FunctionLiteral
+
+    Assert.Equal(2, fnLit.parameters.Length)
+
+    testIdentifier fnLit.parameters.[0] "x"
+    testIdentifier fnLit.parameters.[1] "y"
+
+    Assert.Equal(1, fnLit.body.statements.Length)
+
+    Assert.True(canDowncastToExpressionStatement(fnLit.body.statements.[0]))
+
+    let bodyStmt = fnLit.body.statements.[0] :?> Ast.ExpressionStatement
+
+
+    testStrInfixExpression bodyStmt.expression "x" "+" "y"
+
+
+
+[<Theory>]
+[<InlineData("fn () {};", 0)>]
+[<InlineData("fn (x) {};", 1)>]
+[<InlineData("fn (x, y, z) {};", 2)>]
+let ``Can test function parameter parsing`` input number =
+    let expectedParameters =
+        if number = 0 then Array.empty<string>
+        else if number = 1 then [| "x" |]
+        else [| "x"; "y"; "z" |]
+    
+    let lexer = createLexer input
+    let parser = createParser lexer
+    let program = parseProgram parser
+
+    AssertNoParseErrors parser
+
+    Assert.Equal(1, program.statements.Length)
+
+    Assert.True(canDowncastToExpressionStatement(program.statements.[0]))
+
+    let es = program.statements.[0] :?> Ast.ExpressionStatement
+
+    Assert.True(canDowncastToFunctionLiteral es.expression)
+
+    let fnLit = es.expression :?> Ast.FunctionLiteral
+
+    Assert.Equal(expectedParameters.Length, fnLit.parameters.Length)
+
+    
+    Array.zip expectedParameters fnLit.parameters
+        |> Array.map (fun (e, a) -> testIdentifier a e)
