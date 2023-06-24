@@ -1,20 +1,53 @@
 module Repl
     open System
     open Lexer
+    open Parser
     open Tokens
     let PROMPT = ">> "
 
+    let MONKEY_FACE = " 
+         __,__
+ .--. .-'     '-. .--.
+/ .. \/ .-. .-. \/ .. \ 
+| | '| /   Y   \ |' | |
+| \  \ \ 0 | 0 / /  / |
+\ '- ,\.-'''''-./, -' /
+''-'  /_  ^ ^  _\  '-''
+     |  \._ _./  |
+     \   /\'~'/   /
+      '._'-=-'_.'
+        '-----'"
+
+    let printParserErrors (errors: ResizeArray<string>) =
+        Console.WriteLine (MONKEY_FACE)
+        Console.WriteLine ("Woops! We ran into some monkey business here!")
+        errors.ToArray()
+            |> Array.map (fun e -> printfn "\t%s" e)
+
     let start () =
-        Console.Write(PROMPT)
-        let line = Console.ReadLine()
 
-        let lexer = createLexer line
+        while true do
+            Console.Write(PROMPT)
+            let line = Console.ReadLine()
 
-        let mutable stillHasTokens = true
-        while stillHasTokens do
-            let actualToken = nextToken lexer
+            let lexer = createLexer line
 
-            printfn "(TokenType: %s, Literal: %s" (actualToken.TokenType.ToString()) actualToken.Literal
+            let parser = createParser lexer
 
-            if (actualToken.TokenType = TokenType.EOF) then
-                stillHasTokens <- false
+            let program = parseProgram parser
+
+            if parser.errors.Count > 0 then
+                printParserErrors parser.errors |> ignore
+                ()
+            else
+                let programStr = (program :> Ast.Node).Str()
+                printfn "%s" programStr
+                ()
+            // let mutable stillHasTokens = true
+            // while stillHasTokens do
+            //     let actualToken = nextToken lexer
+
+            //     printfn "(TokenType: %s, Literal: %s" (actualToken.TokenType.ToString()) actualToken.Literal
+
+            //     if (actualToken.TokenType = TokenType.EOF) then
+            //         stillHasTokens <- false

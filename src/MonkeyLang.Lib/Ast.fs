@@ -149,3 +149,21 @@ module Ast
                 
                 let bodyStr = (this.body :> Statement).Str()
                 sprintf "%s (%s) %s" this.token.Literal paraStr bodyStr
+    
+    type CallExpression(token: Tokens.Token, func: Expression, arguments: Expression[]) =
+        member this.token = token
+        member this.func = func
+        member this.arguments = arguments
+        interface Expression with
+            member this.TokenLiteral () = this.token.Literal
+            member this.expressionNode () = ()
+            member this.Str () = 
+                let argStr =
+                    this.arguments
+                        |> Array.map (fun s -> s.Str())
+                        |> Array.reduce (fun a b -> sprintf "%s, %s" a b)
+                
+                let funcStr = this.func.Str()
+
+                sprintf "%s(%s)" funcStr argStr
+        
