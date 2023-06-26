@@ -5,6 +5,7 @@ open Lexer
 open Parser
 open Tokens
 
+
 [<Fact>]
 let ``Can Test String`` () =
     let letToken = { TokenType = TokenType.LET; Literal = "let" }

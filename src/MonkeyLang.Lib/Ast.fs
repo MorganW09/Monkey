@@ -1,7 +1,23 @@
 module Ast
+    type AstType =
+    | Program
+    | Identifier
+    | IntegerLiteral
+    | PrefixExpression
+    | InfixExpression
+    | LetStatement
+    | ReturnStatement
+    | ExpressionStatement
+    | Boolean
+    | BlockStatement
+    | IfExpression
+    | FunctionLiteral
+    | CallExpression
+
     type Node =
         abstract member TokenLiteral : unit -> string
         abstract member Str : unit -> string
+        abstract member AType : unit -> AstType
     
     type Statement =
         inherit Node
@@ -14,6 +30,7 @@ module Ast
     type Program(statements : Statement []) =
         member this.statements = statements
         interface Node with 
+            member this.AType () = AstType.Program
             member this.TokenLiteral () =
                 match this.statements.Length with 
                 | 0 -> ""
@@ -29,6 +46,7 @@ module Ast
         member this.token = token
         member this.value = value
         interface Expression with
+            member this.AType () = AstType.Identifier
             member this.TokenLiteral () = token.Literal
             member this.expressionNode () = ()
             member this.Str () = value
@@ -37,6 +55,7 @@ module Ast
         member this.token = token
         member this.value = value
         interface Expression with
+            member this.AType () = AstType.IntegerLiteral
             member this.TokenLiteral () = token.Literal
             member this.expressionNode () = ()
             member this.Str () = sprintf "%d" value
@@ -46,6 +65,7 @@ module Ast
         member this.operator = operator
         member this.right = right
         interface Expression with
+            member this.AType () = AstType.PrefixExpression
             member this.TokenLiteral () = token.Literal
             member this.expressionNode () = ()
             member this.Str () = 
@@ -59,6 +79,7 @@ module Ast
         member this.operator = operator
         member this.right = right
         interface Expression with
+            member this.AType () = AstType.InfixExpression
             member this.TokenLiteral () = token.Literal
             member this.expressionNode () = ()
             member this.Str () = 
@@ -73,6 +94,7 @@ module Ast
         member this.name = name
         member this.value = value
         interface Statement with
+            member this.AType () = AstType.LetStatement
             member this.TokenLiteral () = token.Literal
             member this.statementNode () = ()
             member this.Str () =
@@ -82,6 +104,7 @@ module Ast
         member this.token = token
         member this.returnValue = returnValue
         interface Statement with
+            member this.AType () = AstType.ReturnStatement
             member this.TokenLiteral () = token.Literal
             member this.statementNode () = ()
             member this.Str () =
@@ -91,6 +114,7 @@ module Ast
         member this.token = token
         member this.expression = expression
         interface Statement with
+            member this.AType () = AstType.ExpressionStatement
             member this.TokenLiteral () = token.Literal
             member this.statementNode () = ()
             member this.Str () = this.expression.Str()
@@ -99,6 +123,7 @@ module Ast
         member this.token = token
         member this.value = value
         interface Expression with
+            member this.AType () = AstType.Boolean
             member this.TokenLiteral () = this.token.Literal
             member this.expressionNode () = ()
             member this.Str () = this.token.Literal
@@ -107,6 +132,7 @@ module Ast
         member this.token = token
         member this.statements = statements
         interface Statement with
+            member this.AType () = AstType.BlockStatement
             member this.TokenLiteral () = this.token.Literal
             member this.statementNode () = ()                
             member this.Str () =
@@ -120,6 +146,7 @@ module Ast
         member this.consequence = consequence
         member this.alternative = alternative
         interface Expression with
+            member this.AType () = AstType.IfExpression
             member this.TokenLiteral () = this.token.Literal
             member this.expressionNode () = ()
             member this.Str () = 
@@ -139,6 +166,7 @@ module Ast
         member this.parameters = parameters
         member this.body = body
         interface Expression with
+            member this.AType () = AstType.FunctionLiteral
             member this.TokenLiteral () = this.token.Literal
             member this.expressionNode () = ()
             member this.Str () = 
@@ -155,6 +183,7 @@ module Ast
         member this.func = func
         member this.arguments = arguments
         interface Expression with
+            member this.AType () = AstType.CallExpression
             member this.TokenLiteral () = this.token.Literal
             member this.expressionNode () = ()
             member this.Str () = 

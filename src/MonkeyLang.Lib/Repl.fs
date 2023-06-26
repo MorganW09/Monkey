@@ -40,8 +40,15 @@ module Repl
                 printParserErrors parser.errors |> ignore
                 ()
             else
-                let programStr = (program :> Ast.Node).Str()
-                printfn "%s" programStr
+                let evaluated = Evaluator.eval program
+                //let programStr = (program :> Ast.Node).Str()
+                //printfn "%s" programStr
+
+                match evaluated with
+                | Some obj -> 
+                    printfn "%s" (obj.Inspect())
+                | None -> 
+                    printfn "Could not evaluate %s" line
                 ()
             // let mutable stillHasTokens = true
             // while stillHasTokens do

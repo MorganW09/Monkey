@@ -30,3 +30,5 @@ module Object
             member this.Inspect () = "null"
             member this.Type() =
                 ObjectType.NULL
+
+//on page 109
