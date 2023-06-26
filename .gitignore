@@ -35,3 +35,6 @@ msbuild.wrn
 
 # Project Specific
 tinroll.api/tin.db
+
+# test file
+regexTest.txt
