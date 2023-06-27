@@ -249,3 +249,15 @@ let ``CanTestFunctionApplications`` input expected =
     let evaluated = testEval input
 
     testIntegerObject evaluated expected
+
+[<Fact>]
+let ``Can test closures`` () =
+    let input = "let newAdder = fn(x) {
+fn(y) { x + y };
+};
+let addTwo = newAdder(2);
+addTwo(2);"
+
+    let evaluated = testEval input
+
+    testIntegerObject evaluated 4L
