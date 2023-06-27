@@ -6,6 +6,7 @@ module Object
     | NULL
     | RETURN
     | ERROR
+    | FUNCTION
 
     type Object =
         abstract member Type : unit -> ObjectType
@@ -49,15 +50,39 @@ module Object
             member this.Type() =
                 ObjectType.ERROR
 
-    type Environment() =
+    type Environment(outer: Environment option) =
         let mutable store = Map.empty<string, Object>
+        member this.outer = outer
         member this.Get (name: string) =
             match store.ContainsKey(name) with
             | true ->
                 Some store.[name]
-            | false -> None
+            | false -> 
+                if this.outer.IsSome then
+                    let out = outer.Value
+                    out.Get name
+                else
+                    None
         member this.Set (name: string) (value: Object) =
             store <- store.Add(name, value)
             ()
         member this.Count () = store.Count
+
+
+    type Function(parameters: Ast.Identifier[], body: Ast.BlockStatement, env: Environment) =
+        member this.parameters = parameters
+        member this.body = body
+        member this.env = env
+        interface Object with
+            member this.Inspect () =
+                
+                let paraStr = 
+                    this.parameters
+                        |> Array.map (fun s -> (s :> Ast.Expression).Str())
+                        |> Array.reduce (fun a b -> sprintf "%s, %s" a b)
+                
+                let bodyStr = (this.body :> Ast.Statement).Str()
+                sprintf "fn (%s) %s" paraStr bodyStr
+            member this.Type() =
+                ObjectType.FUNCTION
 

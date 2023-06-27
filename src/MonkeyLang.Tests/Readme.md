@@ -4,6 +4,7 @@
 
 ```
 dotnet test --filter DisplayName=ParserTests.CanTestFunctionalLiteralParsing
+dotnet test --filter DisplayName=EvaluatorTests.CanTestFunctionApplications
 ```
 
 ### Printing to file for debugging

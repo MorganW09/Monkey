@@ -26,7 +26,7 @@ module Repl
 
     let start () =
 
-        let env = new Object.Environment()
+        let env = new Object.Environment(None)
         while true do
             Console.Write(PROMPT)
             let line = Console.ReadLine()

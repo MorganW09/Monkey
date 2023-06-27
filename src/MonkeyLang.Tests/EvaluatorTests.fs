@@ -25,6 +25,10 @@ let canDowncastToError (obj : Object.Object) =
     match obj with 
     | :? Object.Error as err -> true
     | _ -> false
+let canDowncastToFunction (obj : Object.Object) =
+    match obj with 
+    | :? Object.Function as fnc -> true
+    | _ -> false
 
  
 let testEval input =
@@ -211,4 +215,37 @@ let ``Can test let statements`` input expected =
 
     testIntegerObject evaluated expected
 
-//142
+[<Fact>]
+let ``Can test function object`` () =
+    let input = "fn(x) { x + 2; };"
+
+    let evaluated = testEval input
+
+    Assert.True(evaluated.IsSome, "IsNone")
+
+    let someObj = evaluated.Value
+
+    Assert.True(canDowncastToFunction someObj, "Cannot downcast to function")
+
+    let func = someObj :?> Object.Function
+
+    Assert.Equal(1, func.parameters.Length)
+
+    let param = (func.parameters.[0] :> Ast.Expression).Str()
+    Assert.Equal("x", param)
+
+    let bodyStr = (func.body :> Ast.Statement).Str()
+
+    Assert.Equal("(x + 2)", bodyStr)
+
+[<Theory>]
+[<InlineData("let identity = fn(x) { x; }; identity(5);", 5L)>]
+[<InlineData("let identity = fn(x) { return x; }; identity(5);", 5L)>]
+[<InlineData("let double = fn(x) { x * 2; }; double(5);", 10L)>]
+[<InlineData("let add = fn(x, y) { x + y; }; add(5, 5);", 10L)>]
+[<InlineData("let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20L)>]
+[<InlineData("fn(x) { x; }(5)", 5L)>]
+let ``CanTestFunctionApplications`` input expected =
+    let evaluated = testEval input
+
+    testIntegerObject evaluated expected

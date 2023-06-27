@@ -8,6 +8,16 @@ module Evaluator
 
     let toSomeObj obj = Some (obj :> Object.Object)
 
+    
+    let canDowncastToFunction (s: Object.Object) =
+        match s with 
+        | :? Object.Function as func -> true
+        | _ -> false
+    let canDowncastToReturn (s: Object.Object) =
+        match s with 
+        | :? Object.Return as retr -> true
+        | _ -> false
+
     let isTruthy (obj : Object.Object)  =
         match obj.Type() with
         | Object.NULL -> false
@@ -155,6 +165,22 @@ module Evaluator
             |> newError
             |> toObj
 
+    let extendFunctionEnv (fn: Object.Function) (args: Object.Object[]) =
+        let env = new Object.Environment(Some fn.env)
+
+        for i = 0 to (fn.parameters.Length - 1) do
+            let param = fn.parameters.[i].value
+            env.Set param args.[i]
+
+        env
+
+    let unwrapReturnValue (obj: Object.Object option) =
+        if obj.IsSome && canDowncastToReturn obj.Value then
+            let returnStmt = obj.Value :?> Object.Return
+            Some returnStmt.value
+        else
+            obj
+
     let rec eval (node: Ast.Node) (env: Object.Environment) =
         match node.AType() with 
         | Ast.Program -> 
@@ -245,7 +271,34 @@ module Evaluator
 
             evalIdentifier iden.value env
             |> toSomeObj
-        | _ -> None
+        | Ast.FunctionLiteral ->
+            let func = node :?> Ast.FunctionLiteral
+
+            let param = func.parameters
+            let body = func.body
+
+            new Object.Function(param, body, env)
+            |> toSomeObj
+        | Ast.CallExpression ->
+            let callExpr = node :?> Ast.CallExpression
+
+            let func = eval callExpr.func env
+
+            if func.IsSome then
+                let funcValue = func.Value
+
+                match isError funcValue with
+                | true ->
+                    toSomeObj funcValue
+                | false ->
+                    let args: Object.Object array = evalExpressions callExpr.arguments env
+
+                    if args.Length = 1 && isError args.[0] then
+                        toSomeObj args.[0]
+                    else
+                        applyFunction funcValue args
+            else
+                None
 
     and evalProgram (stmts: Ast.Statement[]) (env: Object.Environment) =
         let mutable result : Object.Object option = None
@@ -300,7 +353,7 @@ module Evaluator
         
         if earlyReturn.IsSome then
             earlyReturn
-        else 
+        else
             result
 
     and evalIfExpression (ifExpr: Ast.IfExpression) (env: Object.Environment) =
@@ -317,6 +370,43 @@ module Evaluator
             else Some (nullObject |> toObj)
         | None -> Some (nullObject |> toObj)
 
+    and evalExpressions (exps: Ast.Expression[]) (env: Object.Environment) =
+        let results = new ResizeArray<Object.Object>()
+        let errorResult = new ResizeArray<Object.Object>()
+
+        for exp in exps do
+            let evaluated = eval exp env
+
+            match evaluated with
+            | Some ev ->
+                if isError ev && errorResult.Count = 0 then
+                    errorResult.Add(ev)
+                    ()
+                else
+                    results.Add(ev)
+                    ()
+            | None ->
+                ()
+        
+        if errorResult.Count > 0 then
+            errorResult.ToArray()
+        else
+            results.ToArray()
+    
+    and applyFunction (fn: Object.Object) (args: Object.Object[]) =
+        if canDowncastToFunction fn then
+            let func = fn :?> Object.Function
+
+            let extendedEnv = extendFunctionEnv func args
+            let evaluated = eval func.body extendedEnv
+
+            unwrapReturnValue evaluated
+        else
+            let typeStr = fn.Type().ToString()
+            sprintf "not a function: %s" typeStr
+            |> newError 
+            |> toSomeObj
+
     let evaluate (node: Ast.Node) =
-        let env = new Object.Environment()
+        let env = new Object.Environment(None)
         eval node env

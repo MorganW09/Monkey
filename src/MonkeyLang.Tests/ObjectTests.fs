@@ -4,7 +4,7 @@ open Xunit
 
 [<Fact>]
 let ``Can add multiple things to environment`` () =
-    let env = new Object.Environment()
+    let env = new Object.Environment(None)
 
     env.Set "Push" (new Object.Boolean(true))
     env.Set "Baby" (new Object.Boolean(true))
