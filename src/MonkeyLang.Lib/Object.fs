@@ -4,6 +4,8 @@ module Object
     | INTEGER
     | BOOLEAN
     | NULL
+    | RETURN
+    | ERROR
 
     type Object =
         abstract member Type : unit -> ObjectType
@@ -30,5 +32,32 @@ module Object
             member this.Inspect () = "null"
             member this.Type() =
                 ObjectType.NULL
+                
+    type Return(value: Object) =
+        member this.value = value
+        interface Object with
+            member this.Inspect () =
+                sprintf "%s" (this.value.Inspect())
+            member this.Type() =
+                ObjectType.RETURN
+    
+    type Error(message: string) =
+        member this.message = message
+        interface Object with
+            member this.Inspect () =
+                sprintf "ERROR: %s" (this.message)
+            member this.Type() =
+                ObjectType.ERROR
 
-//on page 109
+    type Environment() =
+        let mutable store = Map.empty<string, Object>
+        member this.Get (name: string) =
+            match store.ContainsKey(name) with
+            | true ->
+                Some store.[name]
+            | false -> None
+        member this.Set (name: string) (value: Object) =
+            store <- store.Add(name, value)
+            ()
+        member this.Count () = store.Count
+

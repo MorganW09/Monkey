@@ -8,6 +8,7 @@
     <Compile Include="LexerTests.fs" />
     <Compile Include="ParserTests.fs" />
     <Compile Include="AstTests.fs" />
+    <Compile Include="ObjectTests.fs" />
     <Compile Include="EvaluatorTests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

@@ -26,6 +26,7 @@ module Repl
 
     let start () =
 
+        let env = new Object.Environment()
         while true do
             Console.Write(PROMPT)
             let line = Console.ReadLine()
@@ -40,21 +41,11 @@ module Repl
                 printParserErrors parser.errors |> ignore
                 ()
             else
-                let evaluated = Evaluator.eval program
-                //let programStr = (program :> Ast.Node).Str()
-                //printfn "%s" programStr
+                let evaluated = Evaluator.eval program env
 
                 match evaluated with
                 | Some obj -> 
                     printfn "%s" (obj.Inspect())
                 | None -> 
-                    printfn "Could not evaluate %s" line
+                    ()
                 ()
-            // let mutable stillHasTokens = true
-            // while stillHasTokens do
-            //     let actualToken = nextToken lexer
-
-            //     printfn "(TokenType: %s, Literal: %s" (actualToken.TokenType.ToString()) actualToken.Literal
-
-            //     if (actualToken.TokenType = TokenType.EOF) then
-            //         stillHasTokens <- false

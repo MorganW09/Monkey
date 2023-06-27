@@ -17,19 +17,28 @@ let canDowncastToNull (s: Object.Object) =
     match s with 
     | :? Object.Null as int -> true
     | _ -> false
+let canDowncastToReturn (obj : Object.Object) =
+    match obj with 
+    | :? Object.Return as rtr -> true
+    | _ -> false
+let canDowncastToError (obj : Object.Object) =
+    match obj with 
+    | :? Object.Error as err -> true
+    | _ -> false
 
+ 
 let testEval input =
     let lexer = createLexer input
     let parser = createParser lexer
     let program = parseProgram parser
 
-    Evaluator.eval program
+    Evaluator.evaluate program
 
 let testIntegerObject (obj: Object.Object option) expected =
-    Assert.True(obj.IsSome)
+    Assert.True(obj.IsSome, "IsNone")
 
     let someObj = obj.Value
-    Assert.True(canDowncastToInteger someObj)
+    Assert.True(canDowncastToInteger someObj, "Cannot downcast")
 
     let int = someObj :?> Object.Integer
 
@@ -54,6 +63,34 @@ let testNullObject (obj: Object.Object option) =
 
     let someObj = obj.Value
     Assert.True(canDowncastToNull someObj)
+
+let testReturnValue (obj: Object.Object option) expected =
+    Assert.True(obj.IsSome, "IsNone")
+
+    let someObj = obj.Value
+
+    Assert.True(canDowncastToReturn someObj, "Cannot downcast to return")
+
+    let rtr = someObj :?> Object.Return
+
+    Assert.True(canDowncastToInteger rtr.value, "Cannot downcast to integer")
+
+    let int = rtr.value :?> Object.Integer
+
+    Assert.Equal(expected, int.value)
+
+let testErrorObject (obj: Object.Object option) expectedError =
+    Assert.True(obj.IsSome, "IsNone")
+
+    let someObj = obj.Value
+
+    let objType = someObj.GetType().ToString()
+
+    Assert.True(canDowncastToError someObj, sprintf "Cannot downcast %s to error" objType)
+
+    let error = someObj :?> Object.Error
+
+    Assert.Equal(expectedError, error.message)
 
 [<Theory>]
 [<InlineData("5", 5L)>]
@@ -133,3 +170,45 @@ let ``Can test if else expressions`` input (expected: int64 Nullable ) =
         testIntegerObject evaluated expected.Value
     | false -> 
         testNullObject evaluated
+
+[<Theory>]
+[<InlineData("return 10;", 10L)>]
+[<InlineData("return 10; 9;", 10L)>]
+[<InlineData("return 2 * 5; 9;", 10L)>]
+[<InlineData("9; return 2 * 5; 9;", 10L)>]
+[<InlineData("if (10 > 1) {
+if (10 > 1) {
+return 10;
+}
+return 1;
+}", 10L)>]
+let ``Can test evaluation of return statements`` input (expected: int64) =
+    let evaluated = testEval input
+
+    testIntegerObject evaluated expected
+
+[<Theory>]
+[<InlineData("5 + true;","type mismatch: INTEGER + BOOLEAN")>]
+[<InlineData("5 + true; 5;","type mismatch: INTEGER + BOOLEAN")>]
+[<InlineData("-true","unknown operator: -BOOLEAN")>]
+[<InlineData("true + false;","unknown operator: BOOLEAN + BOOLEAN")>]
+[<InlineData("5; true + false; 5","unknown operator: BOOLEAN + BOOLEAN")>]
+[<InlineData("if (10 > 1) { true + false; }","unknown operator: BOOLEAN + BOOLEAN")>]
+[<InlineData("if (10 > 1) { if (10 > 1) { return true + false; } return 1; }","unknown operator: BOOLEAN + BOOLEAN")>]
+[<InlineData("foobar", "identifier not found: foobar")>]
+let ``Can test error handling`` input expectedError =
+    let evaluated = testEval input
+
+    testErrorObject evaluated expectedError
+
+[<Theory>]
+[<InlineData("let a = 5; a;", 5L)>]
+[<InlineData("let a = 5 * 5; a;", 25L)>]
+[<InlineData("let a = 5; let b = a; b;", 5L)>]
+[<InlineData("let a = 5; let b = a; let c = a + b + 5; c;", 15L)>]
+let ``Can test let statements`` input expected =
+    let evaluated = testEval input
+
+    testIntegerObject evaluated expected
+
+//142
