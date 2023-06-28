@@ -7,6 +7,7 @@ module Evaluator
     let toObj obj = obj :> Object.Object
 
     let toSomeObj obj = Some (obj :> Object.Object)
+    let toSome obj = Some obj
 
     
     let canDowncastToFunction (s: Object.Object) =
@@ -35,6 +36,10 @@ module Evaluator
 
     let newError message =
         new Object.Error(message)
+
+    let newErrorObj message =
+        newError message
+        |> toObj
 
     let isError (obj: Object.Object) =
         obj.Type() = Object.ObjectType.ERROR
@@ -207,6 +212,34 @@ module Evaluator
         else
             obj
 
+    let evalArrayIndexExpression (left: Object.Object) (index: Object.Object) =
+        let index = (index :?> Object.Integer).value
+
+        let arrayObj = (left :?> Object.Array)
+
+        let max = int64 arrayObj.elements.Length
+
+        if index > int64 System.Int32.MaxValue then
+            sprintf "Array index greater than Int32.MaxValue: %d" index
+            |> newErrorObj 
+        else if index < 0L || index > (max - 1L) then
+            nullObject
+            |> toObj
+        else
+            let smallIndex = int32 index
+            arrayObj.elements.[smallIndex]
+        
+
+    let evalIndexExpression (left: Object.Object) (index: Object.Object) =
+        match left.Type(), index.Type() with
+        | Object.ObjectType.ARRAY, Object.ObjectType.INTEGER ->
+            evalArrayIndexExpression left index
+        | _, _ ->
+            left.Type().ToString()
+            |> sprintf "index operator not support: %s"
+            |> newErrorObj
+
+
     let rec eval (node: Ast.Node) (env: Object.Environment) =
         match node.AType() with 
         | Ast.Program -> 
@@ -329,6 +362,42 @@ module Evaluator
             let str = node :?> Ast.StringLiteral
             new Object.Str(str.value)
             |> toSomeObj
+        | Ast.ArrayLiteral ->
+            let arr = node :?> Ast.ArrayLiteral
+
+            let elements = evalExpressions arr.elements env
+
+            if elements.Length = 1 && isError elements.[0] then
+                elements.[0]
+                |> toSomeObj
+            else
+                new Object.Array(elements)
+                |> toSomeObj
+        | Ast.IndexExpression ->
+            let indexExpr = node :?> Ast.IndexExpression
+
+            let leftSome = eval indexExpr.left env
+
+            if leftSome.IsSome then
+                let left = leftSome.Value
+
+                if isError left then
+                    toSomeObj left
+                else
+                    let indexSome = eval indexExpr.index env
+
+                    if indexSome.IsSome then
+                        let index = indexSome.Value
+
+                        if isError index then
+                            toSomeObj index
+                        else
+                            evalIndexExpression left index
+                            |> toSome
+                    else
+                        None
+            else
+                None
 
     and evalProgram (stmts: Ast.Statement[]) (env: Object.Environment) =
         let mutable result : Object.Object option = None

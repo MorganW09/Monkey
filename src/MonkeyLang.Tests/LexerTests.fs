@@ -186,3 +186,22 @@ let ``Can lex strings`` () =
     let expectedTokens = buildTokenTypes expectedTokensRaw
     let lexer = createLexer input
     expectedTokens |> List.iter (fun et -> AssertTokens(lexer, et))
+
+[<Fact>]
+let ``Can lex array`` () =
+    let input = "[1, 2];"
+
+    let expectedTokensRaw:(TokenType * string) list =
+        [
+            (TokenType.LBRACKET, "[");
+            (TokenType.INT, "1");
+            (TokenType.COMMA, ",");
+            (TokenType.INT, "2");
+            (TokenType.RBRACKET, "]");
+            (TokenType.SEMICOLON, ";");
+            (TokenType.EOF, "");
+        ]
+
+    let expectedTokens = buildTokenTypes expectedTokensRaw
+    let lexer = createLexer input
+    expectedTokens |> List.iter (fun et -> AssertTokens(lexer, et))

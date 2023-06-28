@@ -14,6 +14,8 @@ module Ast
     | FunctionLiteral
     | CallExpression
     | StringLiteral
+    | ArrayLiteral
+    | IndexExpression
 
     type Node =
         abstract member TokenLiteral : unit -> string
@@ -205,3 +207,34 @@ module Ast
             member this.TokenLiteral () = this.token.Literal
             member this.expressionNode () = ()
             member this.Str () = this.token.Literal
+
+    type ArrayLiteral(token: Tokens.Token, elements: Expression[]) =
+        member this.token = token
+        member this.elements = elements
+        interface Expression with
+            member this.AType () = AstType.ArrayLiteral
+            member this.TokenLiteral () = this.token.Literal
+            member this.expressionNode () = ()
+            member this.Str () = 
+                let elementStr = 
+                    this.elements
+                    |> Array.map (fun e -> e.Str())
+                    |> Array.reduce (fun a b -> a + ", " + b)
+                
+                sprintf "[%s]" elementStr
+    
+    type IndexExpression(token: Tokens.Token, left: Expression, index: Expression) =
+        member this.token = token
+        member this.left = left
+        member this.index = index
+        interface Expression with
+            member this.AType () = AstType.IndexExpression
+            member this.TokenLiteral () = this.token.Literal
+            member this.expressionNode () = ()
+            member this.Str () = 
+                let leftStr = this.left.Str()
+                let indexStr = this.index.Str()
+                
+                sprintf "(%s[%s])" leftStr indexStr
+
+

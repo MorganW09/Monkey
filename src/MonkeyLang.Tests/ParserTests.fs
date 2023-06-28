@@ -56,6 +56,14 @@ let canDowncastToExpression (s: Ast.Statement) =
     match s with
     | :? Ast.Expression as ce -> true
     | _ -> false
+let canDowncastToArrayLiteral (s: Ast.Expression) =
+    match s with
+    | :? Ast.ArrayLiteral as al -> true
+    | _ -> false
+let canDowncastToIndexExpression (s: Ast.Expression) =
+    match s with
+    | :? Ast.IndexExpression as ie -> true
+    | _ -> false
 
 let testLetStatement (expected: string) (s: Ast.Statement) =
     Assert.Equal(s.TokenLiteral(), "let")
@@ -161,9 +169,18 @@ let assertBasicStuff input =
 
     AssertNoParseErrors parser
 
-    Assert.Equal(1, program.statements.Length)
+    Assert.True(1 = program.statements.Length, "Program has more than 1 statement")
 
     program
+
+let canAssertExpressionStatement input =
+    let program = assertBasicStuff input
+
+    let statement = program.statements.[0]
+
+    Assert.True(canDowncastToExpressionStatement statement)
+
+    (statement :?> Ast.ExpressionStatement).expression
 
 let assertExpressionStatement (program : Ast.Program) =
     
@@ -422,6 +439,8 @@ let ``Can test integer infix operations`` input exLeft expectedOp exRight =
 [<InlineData("a + add(b * c) + d","((a + add((b * c))) + d)")>]
 [<InlineData("add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))","add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))")>]
 [<InlineData("add(a + b + c * d / f + g)","add((((a + b) + ((c * d) / f)) + g))")>]
+[<InlineData("a * [1, 2, 3, 4][b * c] * d", "((a * ([1, 2, 3, 4][(b * c)])) * d)")>]
+[<InlineData("add(a * b[2], b[1], 2 * [1, 2][1])", "add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))")>]
 let ``Can test operator precedence`` input expected =
     let lexer = createLexer input
     let parser = createParser lexer
@@ -588,16 +607,6 @@ let ``Can test function parameter parsing`` input number =
         if number = 0 then Array.empty<string>
         else if number = 1 then [| "x" |]
         else [| "x"; "y"; "z" |]
-    
-    // let lexer = createLexer input
-    // let parser = createParser lexer
-    // let program = parseProgram parser
-
-    // AssertNoParseErrors parser
-
-    // Assert.Equal(1, program.statements.Length)
-
-    // Assert.True(canDowncastToExpressionStatement(program.statements.[0]))
 
     let program = assertBasicStuff input
     
@@ -686,3 +695,38 @@ let ``Can test string literal expression`` () =
 
     testStringLiteral statement  "hello world"
 
+[<Fact>]
+let ``Can parse array literals`` () =
+    let input = "[1, 2 * 2, 3 + 3]"
+
+    let program = assertBasicStuff input
+
+    let statement = program.statements.[0]
+
+    Assert.True(canDowncastToExpressionStatement statement)
+
+    let expr = (statement :?> Ast.ExpressionStatement).expression
+
+    Assert.True(canDowncastToArrayLiteral expr)
+
+    let arrayLiteral = (expr :?> Ast.ArrayLiteral)
+
+    Assert.Equal(3, arrayLiteral.elements.Length)
+
+    testIntegerLiteral arrayLiteral.elements.[0] 1L
+    testIntInfixExpression arrayLiteral.elements.[1] 2L "*" 2L
+    testIntInfixExpression arrayLiteral.elements.[2] 3L "+" 3L
+
+[<Fact>]
+let ``Can parse array index expression`` () =
+    let input = "myArray[1 + 1]"
+
+    let expr = canAssertExpressionStatement input
+
+    Assert.True(canDowncastToIndexExpression expr)
+
+    let indexExpr = expr :?> Ast.IndexExpression
+
+    testIdentifier indexExpr.left "myArray"
+
+    testIntInfixExpression indexExpr.index 1L "+" 1L

@@ -142,6 +142,8 @@ module Lexer
             | ')' -> (TokenType.RPAREN, l.ch.ToString())
             | '{' -> (TokenType.LBRACE, l.ch.ToString())
             | '}' -> (TokenType.RBRACE, l.ch.ToString())
+            | '[' -> (TokenType.LBRACKET, l.ch.ToString())
+            | ']' -> (TokenType.RBRACKET, l.ch.ToString())
             | '"' -> 
                 let literal = readString l
                 (TokenType.STRING, literal)

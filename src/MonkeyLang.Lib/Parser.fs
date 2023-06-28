@@ -9,6 +9,7 @@ module Parser
     | PRODUCT = 5
     | PREFIX = 6
     | CALL = 7
+    | INDEX = 8
 
     let PrecedenceMap =
         Map.empty
@@ -21,6 +22,7 @@ module Parser
             .Add(TokenType.SLASH, ExprPrecedence.PRODUCT)
             .Add(TokenType.ASTERISK, ExprPrecedence.PRODUCT)
             .Add(TokenType.LPAREN, ExprPrecedence.CALL)
+            .Add(TokenType.LBRACKET, ExprPrecedence.INDEX)
 
     type prefixParse = ParserState -> Ast.Expression option
     and infixParse = ParserState -> Ast.Expression -> Ast.Expression option
@@ -168,6 +170,49 @@ module Parser
     let parseBoolean p =
         new Ast.Boolean (p.curToken, curTokenIs p TokenType.TRUE)
         |> toSomeExpr
+
+    let parseExpressionList p endToken =
+        let exprList = new ResizeArray<Ast.Expression>()
+
+        if peekTokenIs p endToken then
+            nextToken p
+            Some (exprList.ToArray())
+        else
+            nextToken p
+
+            let expr = parseExpression p ExprPrecedence.LOWEST
+
+            if expr.IsSome then
+                exprList.Add(expr.Value)
+                ()
+            else
+                ()
+
+            while peekTokenIs p TokenType.COMMA do
+                nextToken p
+                nextToken p
+
+
+                let nextExpr = parseExpression p ExprPrecedence.LOWEST
+                if nextExpr.IsSome then
+                    exprList.Add(nextExpr.Value)
+                    ()
+                else
+                    ()
+            
+            if not (expectPeek p endToken) then
+                None
+            else 
+                Some (exprList.ToArray())
+
+    let parseArrayLiteral p =
+        let curToken = p.curToken
+
+        match parseExpressionList p TokenType.RBRACKET with
+        | Some elements ->
+            new Ast.ArrayLiteral(curToken, elements)
+            |> toSomeExpr
+        | None -> None
     
     let parsePrefixExpression p =
         let curToken = p.curToken
@@ -309,45 +354,64 @@ module Parser
                 new Ast.FunctionLiteral(curToken, parameters, body)
                 |> toSomeExpr
 
-    let parseCallArguments p =
-        let args = new ResizeArray<Ast.Expression>()
+    // let parseCallArguments p =
+    //     let args = new ResizeArray<Ast.Expression>()
 
-        if peekTokenIs p TokenType.RPAREN then
-            nextToken p
-            Array.empty<Ast.Expression>
-        else
-            nextToken p
+    //     if peekTokenIs p TokenType.RPAREN then
+    //         nextToken p
+    //         Array.empty<Ast.Expression>
+    //     else
+    //         nextToken p
 
-            let arg = parseExpression p ExprPrecedence.LOWEST
+    //         let arg = parseExpression p ExprPrecedence.LOWEST
 
-            if arg.IsNone then
-                Array.empty<Ast.Expression>
-            else
-                args.Add(arg.Value)
+    //         if arg.IsNone then
+    //             Array.empty<Ast.Expression>
+    //         else
+    //             args.Add(arg.Value)
 
-                while peekTokenIs p TokenType.COMMA do
-                    nextToken p
-                    nextToken p
+    //             while peekTokenIs p TokenType.COMMA do
+    //                 nextToken p
+    //                 nextToken p
                     
-                    let arg2 = parseExpression p ExprPrecedence.LOWEST
+    //                 let arg2 = parseExpression p ExprPrecedence.LOWEST
 
-                    match arg2 with
-                    | Some a -> 
-                        args.Add(a)
-                        ()
-                    | None -> ()
+    //                 match arg2 with
+    //                 | Some a -> 
+    //                     args.Add(a)
+    //                     ()
+    //                 | None -> ()
                 
-                if not (expectPeek p TokenType.RPAREN) then
-                    Array.empty<Ast.Expression>
-                else
-                    args.ToArray()
+    //             if not (expectPeek p TokenType.RPAREN) then
+    //                 Array.empty<Ast.Expression>
+    //             else
+    //                 args.ToArray()
 
-    let parseCallExpression p (func: Ast.Expression)=
+    let parseCallExpression p (func: Ast.Expression) =
         let curToken = p.curToken
-        let arguments = parseCallArguments p
+        
+        match parseExpressionList p TokenType.RPAREN with
+        |  Some arguments ->
+            new Ast.CallExpression(curToken, func, arguments)
+            |> toSomeExpr
+        | None -> None
 
-        new Ast.CallExpression(curToken, func, arguments)
-        |> toSomeExpr
+    let parseIndexExpression p (left: Ast.Expression) =
+        let curToken = p.curToken
+
+        nextToken p
+
+        let index = parseExpression p ExprPrecedence.LOWEST
+
+        match index with
+        | Some i ->
+
+            if not (expectPeek p TokenType.RBRACKET) then
+                None
+            else
+                new Ast.IndexExpression(curToken, left, i)
+                |> toSomeExpr
+        | None -> None
 
     let createParser lexer =
         let firstToken = Lexer.nextToken lexer
@@ -365,6 +429,7 @@ module Parser
         prefixFns.Add(TokenType.IF, parseIfExpression)
         prefixFns.Add(TokenType.FUNCTION, parseFunctionLiteral)
         prefixFns.Add(TokenType.STRING, parseStringLiteral)
+        prefixFns.Add(TokenType.LBRACKET, parseArrayLiteral)
 
         //regist infix parse functions
         let infixFns = new System.Collections.Generic.Dictionary<TokenType, infixParse>()
@@ -377,6 +442,7 @@ module Parser
         infixFns.Add(TokenType.LT, parseInfixExpression)
         infixFns.Add(TokenType.GT, parseInfixExpression)
         infixFns.Add(TokenType.LPAREN, parseCallExpression)
+        infixFns.Add(TokenType.LBRACKET, parseIndexExpression)
 
         let parser = 
             { 

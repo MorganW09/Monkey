@@ -9,6 +9,7 @@ module Object
     | FUNCTION
     | STRING
     | BUILTIN
+    | ARRAY
 
     type Object =
         abstract member Type : unit -> ObjectType
@@ -103,3 +104,14 @@ module Object
             member this.Type() = ObjectType.BUILTIN
 
 
+    type Array(elements: Object[]) =
+        member this.elements = elements
+        interface Object with
+            member this.Type() = ObjectType.ARRAY
+            member this.Inspect() =
+                let elementStr =
+                    this.elements
+                    |> Array.map (fun e -> e.Inspect())
+                    |> Array.reduce (fun a b -> sprintf "%s, %s" a b)
+                
+                sprintf "[%s]" elementStr

@@ -33,6 +33,10 @@ let canDowncastToStr (obj : Object.Object) =
     match obj with 
     | :? Object.Str as str -> true
     | _ -> false
+let canDowncastToArray (obj : Object.Object) =
+    match obj with 
+    | :? Object.Array as arr -> true
+    | _ -> false
 
  
 let testEval input =
@@ -84,7 +88,8 @@ let testNullObject (obj: Object.Object option) =
     Assert.True(obj.IsSome, "IsNone")
 
     let someObj = obj.Value
-    Assert.True(canDowncastToNull someObj)
+    let objType = someObj.GetType().ToString()
+    Assert.True(canDowncastToNull someObj, (sprintf "Cannot downcast %s to Null" objType))
 
 let testReturnValue (obj: Object.Object option) expected =
     Assert.True(obj.IsSome, "IsNone")
@@ -113,6 +118,19 @@ let testErrorObject (obj: Object.Object option) expectedError =
     let error = someObj :?> Object.Error
 
     Assert.Equal(expectedError, error.message)
+
+let testArrayObject (obj: Object.Object option) expectedLength =
+    Assert.True(obj.IsSome, "IsNone")
+
+    let someObj = obj.Value
+
+    let objType = someObj.GetType().ToString()
+
+    Assert.True(canDowncastToArray someObj, sprintf "Cannot downcast %s to error" objType)
+
+    let arr = someObj :?> Object.Array
+
+    Assert.Equal(expectedLength, arr.elements.Length)
 
 [<Theory>]
 [<InlineData("5", 5L)>]
@@ -301,17 +319,96 @@ let ``Can test string concatenation`` () =
 [<InlineData("len(\"\")", 0L)>]
 [<InlineData("len(\"four\")", 4L)>]
 [<InlineData("len(\"hello world\")", 11L)>]
-let ``Can test len built in function success`` input expected =
+[<InlineData("len([1, 2, 3])", 3L)>]
+[<InlineData("len([])", 0L)>]
+[<InlineData("first([1, 2, 3])", 1L)>]
+[<InlineData("first([])", null)>]
+[<InlineData("last([1,2,3,4])", 4L)>]
+[<InlineData("last([4])", 4L)>]
+[<InlineData("last([])", null)>]
+let ``Can test len built in function success`` input (expected: int64 Nullable) =
     let evaluated = testEval input
 
-    testIntegerObject evaluated expected
+    match expected.HasValue with 
+    | true ->
+        testIntegerObject evaluated expected.Value
+    | false -> 
+        testNullObject evaluated
+
+[<Theory>]
+[<InlineData("rest([1,2,3,4])", 3)>]
+[<InlineData("rest(rest([1,2,3,4]))", 2)>]
+[<InlineData("rest(rest(rest([1,2,3,4])))", 1)>]
+[<InlineData("rest(rest(rest(rest([1,2,3,4]))))", 0)>]
+[<InlineData("rest(rest(rest(rest(rest([1,2,3,4])))))", null)>]
+let ``Can test rest of arrays`` input (expectedLength: int Nullable) =
+    let evaluated = testEval input
+
+    match expectedLength.HasValue with
+    | true ->
+        testArrayObject evaluated expectedLength.Value
+    | false ->
+        testNullObject evaluated
+
+[<Fact>]
+let ``Can test push array function`` () =
+    let input = "let a = [1,2,3,4];
+    let b = push(a, 5);
+    b"
+
+    let evaluated = testEval input
+    testArrayObject evaluated 5
 
 [<Theory>]
 [<InlineData("len(1)", "argument to \"len\" not supported, got INTEGER")>]
 [<InlineData("len(\"one\", \"two\")", "wrong number of arguments. got=2, want=1")>]
+[<InlineData("first(1)", "argument to \"first\" must be ARRAY, got INTEGER")>]
+[<InlineData("first(\"one\", \"two\")", "wrong number of arguments. got=2, want=1")>]
+[<InlineData("last(1)", "argument to \"last\" must be ARRAY, got INTEGER")>]
+[<InlineData("last(\"one\", \"two\")", "wrong number of arguments. got=2, want=1")>]
+[<InlineData("rest(1)", "argument to \"rest\" must be ARRAY, got INTEGER")>]
+[<InlineData("rest(\"one\", \"two\")", "wrong number of arguments. got=2, want=1")>]
 let ``Can test len built in function errors`` input expected =
     let evaluated = testEval input
 
     testErrorObject evaluated expected
 
-//167
+[<Fact>]
+let ``Can test array literals`` () =
+    let input = "[1, 2 * 2, 3 + 3]"
+
+    let evaluated = testEval input
+
+    Assert.True(evaluated.IsSome)
+
+    let obj = evaluated.Value
+
+    Assert.True(canDowncastToArray obj)
+
+    let arr = obj :?> Object.Array
+
+    Assert.Equal(3, arr.elements.Length)
+
+    testIntegerObject (Some arr.elements.[0]) 1L
+    testIntegerObject (Some arr.elements.[1]) 4L
+    testIntegerObject (Some arr.elements.[2]) 6L
+
+[<Theory>]
+[<InlineData("[1, 2, 3][0]",1L)>]
+[<InlineData("[1, 2, 3][1]",2L)>]
+[<InlineData("[1, 2, 3][2]",3L)>]
+[<InlineData("let i = 0; [1][i];",1L)>]
+[<InlineData("[1, 2, 3][1 + 1];",3L)>]
+[<InlineData("let myArray = [1, 2, 3]; myArray[2];",3L)>]
+[<InlineData("let myArray = [1, 2, 3]; myArray[0] + myArray[1] + myArray[2];",6L)>]
+[<InlineData("let myArray = [1, 2, 3]; let i = myArray[0]; myArray[i]",2L)>]
+[<InlineData("[1, 2, 3][3]", null)>]
+[<InlineData("[1, 2, 3][-1]",null)>]
+let ``Can test array index expression`` input (expected: int64 Nullable) =
+    let evaluated = testEval input
+
+    match expected.HasValue with 
+    | true ->
+        testIntegerObject evaluated expected.Value
+    | false -> 
+        testNullObject evaluated
