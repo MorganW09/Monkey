@@ -40,6 +40,15 @@ module Lexer
         l.readPosition <- l.readPosition + 1
         l.ch <- newChar
 
+    let readString (l: LexerState) =
+        let startPosition = l.position + 1
+        
+        readChar l
+        while l.ch <> '"' && l.ch <> '\000' do
+            readChar l
+
+        l.input.Substring(startPosition, l.position - startPosition)
+
     let isLetter(ch: char) =
         let lowerCase = ch.CompareTo('a') >= 0 && ch.CompareTo('z') <= 0
         let upperCase = ch.CompareTo('A') >= 0 && ch.CompareTo('Z') <= 0;
@@ -133,6 +142,9 @@ module Lexer
             | ')' -> (TokenType.RPAREN, l.ch.ToString())
             | '{' -> (TokenType.LBRACE, l.ch.ToString())
             | '}' -> (TokenType.RBRACE, l.ch.ToString())
+            | '"' -> 
+                let literal = readString l
+                (TokenType.STRING, literal)
             | '\000' -> (TokenType.EOF, "")
             | _ -> nextComplexToken l
 

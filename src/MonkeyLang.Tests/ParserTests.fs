@@ -48,6 +48,14 @@ let canDowncastToCallExpression (s: Ast.Expression) =
     match s with
     | :? Ast.CallExpression as ce -> true
     | _ -> false
+let canDowncastToStringLiteral (s: Ast.Expression) =
+    match s with
+    | :? Ast.StringLiteral as ce -> true
+    | _ -> false
+let canDowncastToExpression (s: Ast.Statement) =
+    match s with
+    | :? Ast.Expression as ce -> true
+    | _ -> false
 
 let testLetStatement (expected: string) (s: Ast.Statement) =
     Assert.Equal(s.TokenLiteral(), "let")
@@ -134,6 +142,17 @@ let testStrInfixExpression (ie : Ast.Expression) (left) (operator) (right) =
 
     testIdentifier infixExpr.right right
 
+let testStringLiteral (il : Ast.Statement) (value) =
+    let typeStr = il.GetType().ToString()
+    Assert.True(canDowncastToExpressionStatement il, (sprintf "Cannot downcast %s to expression" typeStr))
+
+    let expr = il :?> Ast.ExpressionStatement
+
+    Assert.True(canDowncastToStringLiteral expr.expression)
+
+    let stringLiteral = expr.expression :?> Ast.StringLiteral
+
+    Assert.Equal(stringLiteral.value, value)
 
 let assertBasicStuff input =
     let lexer = createLexer input
@@ -647,12 +666,23 @@ let ``Can test call expression parameter parsing`` input exIdent num =
         ()
 
 [<Theory>]
-[<InlineData("let x = 5;", "x", 0)>]
-[<InlineData("let y = true;", "y", 1)>]
-[<InlineData("let foobar = y;", "foobar", 2)>]
-let ``Can test let statements`` input identifier num =
+[<InlineData("let x = 5;", "x")>]
+[<InlineData("let y = true;", "y")>]
+[<InlineData("let foobar = y;", "foobar")>]
+let ``Can test let statements`` input identifier =
     let program = assertBasicStuff input
 
     let statement = program.statements.[0]
     
     testLetStatement identifier statement
+
+[<Fact>]
+let ``Can test string literal expression`` () =
+    let input = "\"hello world\";"
+
+    let program = assertBasicStuff input
+
+    let statement = program.statements.[0]
+
+    testStringLiteral statement  "hello world"
+

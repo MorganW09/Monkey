@@ -35,6 +35,15 @@ module Parser
             infixParseFns : System.Collections.Generic.Dictionary<TokenType, infixParse>
         }
 
+    let toExpr exp = exp :> Ast.Expression
+
+    let toSome (exp: Ast.Expression) = Some exp
+
+    let toSomeExpr exp =
+        exp
+        |> toExpr
+        |> toSome
+
     let registerPrefix p token func =
         match p.prefixParseFns.ContainsKey token with
         | true -> ()
@@ -95,9 +104,6 @@ module Parser
         | false -> 
             p.errors.Add(sprintf "no prefix parse function for %s found" p.curToken.Literal)
             None
-        //do this safely
-        // let prefix = p.prefixParseFns.[p.curToken.TokenType]
-        // prefix p
 
     let parseLetStatement (p: ParserState) =
         let letToken = p.curToken
@@ -141,28 +147,27 @@ module Parser
         | None ->
             None
 
+    let parseStringLiteral p =
+        new Ast.StringLiteral (p.curToken, p.curToken.Literal)
+        |> toSomeExpr
 
     let parseIdentifier  p =
-        let identifier = new Ast.Identifier (p.curToken, p.curToken.Literal)
-        let expr = identifier :> Ast.Expression
-        Some expr
+        new Ast.Identifier (p.curToken, p.curToken.Literal)
+        |> toSomeExpr
 
     let parseIntegerLiteral p =
-        //more stuff for integer literal        
         match System.Int64.TryParse p.curToken.Literal with
         | true, l ->
-            let intLiteral = new Ast.IntegerLiteral(p.curToken, l)
-            let expr = intLiteral :> Ast.Expression
-            Some expr
+            new Ast.IntegerLiteral(p.curToken, l)
+            |> toSomeExpr
         | _ -> 
             let errorMsg = sprintf "could not parse %s as integer" p.curToken.Literal
             p.errors.Add(errorMsg)
             None
 
     let parseBoolean p =
-        let boolean = new Ast.Boolean (p.curToken, curTokenIs p TokenType.TRUE)
-        Some (boolean :> Ast.Expression)
-
+        new Ast.Boolean (p.curToken, curTokenIs p TokenType.TRUE)
+        |> toSomeExpr
     
     let parsePrefixExpression p =
         let curToken = p.curToken
@@ -171,8 +176,8 @@ module Parser
 
         match parseExpression p ExprPrecedence.PREFIX with
         | Some expr ->
-            let prefix = new Ast.PrefixExpression(curToken, curToken.Literal, expr)
-            Some (prefix :> Ast.Expression)
+            new Ast.PrefixExpression(curToken, curToken.Literal, expr)
+            |> toSomeExpr
         | None -> None
 
     let parseInfixExpression p left =
@@ -184,8 +189,8 @@ module Parser
 
         match parseExpression p precedence with
         | Some right ->
-            let infix = new Ast.InfixExpression(curToken, left, curToken.Literal, right)
-            Some (infix :> Ast.Expression)
+            new Ast.InfixExpression(curToken, left, curToken.Literal, right)
+            |> toSomeExpr
         | None -> None
 
     let parseExpressionStatement p =
@@ -213,9 +218,7 @@ module Parser
         match p.curToken.TokenType with 
         | TokenType.LET -> parseLetStatement p
         | TokenType.RETURN -> parseReturnStatement p
-        | _ -> 
-            //TODO - figure something else out
-            (parseExpressionStatement p)
+        | _ -> parseExpressionStatement p
 
     let parseBlockStatement p =
         let curToken = p.curToken
@@ -261,11 +264,11 @@ module Parser
                     else
                         let alternative = parseBlockStatement p
 
-                        let ifExpr = new Ast.IfExpression(curToken, condition.Value, consequence, Some alternative)
-                        Some (ifExpr :> Ast.Expression)
+                        new Ast.IfExpression(curToken, condition.Value, consequence, Some alternative)
+                        |> toSomeExpr
                 else
-                    let ifExpr = new Ast.IfExpression(curToken, condition.Value, consequence, None)
-                    Some (ifExpr :> Ast.Expression)
+                    new Ast.IfExpression(curToken, condition.Value, consequence, None)
+                    |> toSomeExpr
 
     let parseFunctionParameters p =
         let identifiers = new ResizeArray<Ast.Identifier>()
@@ -303,9 +306,8 @@ module Parser
             else
                 let body = parseBlockStatement p
 
-                let fnLit = new Ast.FunctionLiteral(curToken, parameters, body)
-
-                Some (fnLit :> Ast.Expression)
+                new Ast.FunctionLiteral(curToken, parameters, body)
+                |> toSomeExpr
 
     let parseCallArguments p =
         let args = new ResizeArray<Ast.Expression>()
@@ -344,9 +346,8 @@ module Parser
         let curToken = p.curToken
         let arguments = parseCallArguments p
 
-        let callExpr = new Ast.CallExpression(curToken, func, arguments)
-
-        Some (callExpr :> Ast.Expression)
+        new Ast.CallExpression(curToken, func, arguments)
+        |> toSomeExpr
 
     let createParser lexer =
         let firstToken = Lexer.nextToken lexer
@@ -363,6 +364,7 @@ module Parser
         prefixFns.Add(TokenType.LPAREN, parseGroupedExpression)
         prefixFns.Add(TokenType.IF, parseIfExpression)
         prefixFns.Add(TokenType.FUNCTION, parseFunctionLiteral)
+        prefixFns.Add(TokenType.STRING, parseStringLiteral)
 
         //regist infix parse functions
         let infixFns = new System.Collections.Generic.Dictionary<TokenType, infixParse>()

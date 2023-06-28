@@ -7,10 +7,14 @@ module Object
     | RETURN
     | ERROR
     | FUNCTION
+    | STRING
+    | BUILTIN
 
     type Object =
         abstract member Type : unit -> ObjectType
         abstract member Inspect : unit -> string
+
+    type BuiltinFunction = Object[] -> Object
 
     type Integer(value: int64) =
         member this.value = value
@@ -27,6 +31,12 @@ module Object
                 sprintf "%b" this.value
             member this.Type() =
                 ObjectType.BOOLEAN
+    
+    type Str(value: string) =
+        member this.value = value
+        interface Object with
+            member this.Inspect() = this.value
+            member this.Type() = ObjectType.STRING
     
     type Null() =
         interface Object with
@@ -85,4 +95,11 @@ module Object
                 sprintf "fn (%s) %s" paraStr bodyStr
             member this.Type() =
                 ObjectType.FUNCTION
+        
+    type Builtin(fn: BuiltinFunction) =
+        member this.fn = fn
+        interface Object with
+            member this.Inspect () = "builtin function"
+            member this.Type() = ObjectType.BUILTIN
+
 

@@ -29,6 +29,10 @@ let canDowncastToFunction (obj : Object.Object) =
     match obj with 
     | :? Object.Function as fnc -> true
     | _ -> false
+let canDowncastToStr (obj : Object.Object) =
+    match obj with 
+    | :? Object.Str as str -> true
+    | _ -> false
 
  
 let testEval input =
@@ -42,9 +46,23 @@ let testIntegerObject (obj: Object.Object option) expected =
     Assert.True(obj.IsSome, "IsNone")
 
     let someObj = obj.Value
-    Assert.True(canDowncastToInteger someObj, "Cannot downcast")
+    let objType = someObj.GetType().ToString()
+
+    Assert.True(canDowncastToInteger someObj, (sprintf "Cannot downcast %s to Integer" objType))
 
     let int = someObj :?> Object.Integer
+
+    Assert.Equal(expected, int.value)
+
+let testStringLiteral (obj: Object.Object option) expected =
+    Assert.True(obj.IsSome, "IsNone")
+
+    let someObj = obj.Value
+    let objType = someObj.GetType().ToString()
+
+    Assert.True(canDowncastToStr someObj, (sprintf "Cannot downcast %s to Str" objType))
+
+    let int = someObj :?> Object.Str
 
     Assert.Equal(expected, int.value)
 
@@ -196,6 +214,7 @@ let ``Can test evaluation of return statements`` input (expected: int64) =
 [<InlineData("5 + true; 5;","type mismatch: INTEGER + BOOLEAN")>]
 [<InlineData("-true","unknown operator: -BOOLEAN")>]
 [<InlineData("true + false;","unknown operator: BOOLEAN + BOOLEAN")>]
+[<InlineData("\"hello\" - \"world\";","unknown operator: STRING - STRING")>]
 [<InlineData("5; true + false; 5","unknown operator: BOOLEAN + BOOLEAN")>]
 [<InlineData("if (10 > 1) { true + false; }","unknown operator: BOOLEAN + BOOLEAN")>]
 [<InlineData("if (10 > 1) { if (10 > 1) { return true + false; } return 1; }","unknown operator: BOOLEAN + BOOLEAN")>]
@@ -261,3 +280,38 @@ addTwo(2);"
     let evaluated = testEval input
 
     testIntegerObject evaluated 4L
+
+[<Fact>]
+let ``Can test string literal`` () =
+    let input = "\"Hello world!\""
+
+    let evaluated = testEval input
+
+    testStringLiteral evaluated "Hello world!"
+
+[<Fact>]
+let ``Can test string concatenation`` () =
+    let input = "\"Hello\" + \" \" + \"world!\""
+
+    let evaluated = testEval input
+
+    testStringLiteral evaluated "Hello world!"
+
+[<Theory>]
+[<InlineData("len(\"\")", 0L)>]
+[<InlineData("len(\"four\")", 4L)>]
+[<InlineData("len(\"hello world\")", 11L)>]
+let ``Can test len built in function success`` input expected =
+    let evaluated = testEval input
+
+    testIntegerObject evaluated expected
+
+[<Theory>]
+[<InlineData("len(1)", "argument to \"len\" not supported, got INTEGER")>]
+[<InlineData("len(\"one\", \"two\")", "wrong number of arguments. got=2, want=1")>]
+let ``Can test len built in function errors`` input expected =
+    let evaluated = testEval input
+
+    testErrorObject evaluated expected
+
+//167

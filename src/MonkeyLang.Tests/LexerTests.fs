@@ -170,4 +170,19 @@ let ``Can Lex advanced equals/not equals operators`` () =
     let expectedTokens = buildTokenTypes expectedTokensRaw
     let lexer = createLexer input
     expectedTokens |> List.iter (fun et -> AssertTokens(lexer, et))
-    
+
+[<Fact>]
+let ``Can lex strings`` () =
+    let input = "\"foobar\"
+    \"foo bar\""
+
+    let expectedTokensRaw:(TokenType * string) list =
+        [
+            (TokenType.STRING, "foobar");
+            (TokenType.STRING, "foo bar");
+            (TokenType.EOF, "");
+        ]
+
+    let expectedTokens = buildTokenTypes expectedTokensRaw
+    let lexer = createLexer input
+    expectedTokens |> List.iter (fun et -> AssertTokens(lexer, et))

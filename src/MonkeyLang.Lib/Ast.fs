@@ -13,6 +13,7 @@ module Ast
     | IfExpression
     | FunctionLiteral
     | CallExpression
+    | StringLiteral
 
     type Node =
         abstract member TokenLiteral : unit -> string
@@ -195,4 +196,12 @@ module Ast
                 let funcStr = this.func.Str()
 
                 sprintf "%s(%s)" funcStr argStr
-        
+    
+    type StringLiteral(token: Tokens.Token, value: string) =
+        member this.token = token
+        member this.value = value
+        interface Expression with
+            member this.AType () = AstType.StringLiteral
+            member this.TokenLiteral () = this.token.Literal
+            member this.expressionNode () = ()
+            member this.Str () = this.token.Literal

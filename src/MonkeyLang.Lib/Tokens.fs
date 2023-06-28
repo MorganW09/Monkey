@@ -6,6 +6,7 @@
         // identifiers + literals
         | IDENT
         | INT
+        | STRING
         // operators
         | ASSIGN
         | EQ

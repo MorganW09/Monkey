@@ -13,6 +13,10 @@ module Evaluator
         match s with 
         | :? Object.Function as func -> true
         | _ -> false
+    let canDowncastToBuiltin (s: Object.Object) =
+        match s with 
+        | :? Object.Builtin as func -> true
+        | _ -> false
     let canDowncastToReturn (s: Object.Object) =
         match s with 
         | :? Object.Return as retr -> true
@@ -115,6 +119,19 @@ module Evaluator
             |> newError
             |> toObj
 
+    let evalStringInfixExpression operator (left: Object.Str) (right: Object.Str) =
+        match operator with
+        | "+" ->
+            new Object.Str(left.value + right.value)
+            |> toObj
+        | _ ->
+            let leftStr = getTypeStr left
+            let rightStr = getTypeStr right
+
+            sprintf "unknown operator: %s %s %s" leftStr operator rightStr
+            |> newError
+            |> toObj
+
 
     let evalPrefixExpression operator right =
         match operator with
@@ -139,6 +156,10 @@ module Evaluator
             let leftBool = left :?> Object.Boolean
             let rightBool = right :?> Object.Boolean
             evalBooleanInfixExpression operator leftBool rightBool
+        | Object.ObjectType.STRING, Object.ObjectType.STRING ->
+            let leftStr = left :?> Object.Str
+            let rightStr = right :?> Object.Str
+            evalStringInfixExpression operator leftStr rightStr
         | _, _ ->             
             let leftStr = getTypeStr left
             let rightStr = getTypeStr right
@@ -161,9 +182,14 @@ module Evaluator
         | Some v ->
             v
         | None ->
-            sprintf "identifier not found: %s" identifier
-            |> newError
-            |> toObj
+
+            if Builtins.builtinsMap.ContainsKey identifier then
+                Builtins.builtinsMap.[identifier]
+                |> toObj
+            else
+                sprintf "identifier not found: %s" identifier
+                |> newError
+                |> toObj
 
     let extendFunctionEnv (fn: Object.Function) (args: Object.Object[]) =
         let env = new Object.Environment(Some fn.env)
@@ -299,6 +325,10 @@ module Evaluator
                         applyFunction funcValue args
             else
                 None
+        | Ast.StringLiteral ->
+            let str = node :?> Ast.StringLiteral
+            new Object.Str(str.value)
+            |> toSomeObj
 
     and evalProgram (stmts: Ast.Statement[]) (env: Object.Environment) =
         let mutable result : Object.Object option = None
@@ -401,6 +431,11 @@ module Evaluator
             let evaluated = eval func.body extendedEnv
 
             unwrapReturnValue evaluated
+        else if canDowncastToBuiltin fn then
+            let builtin = fn :?> Object.Builtin
+
+            builtin.fn args
+            |> toSomeObj
         else
             let typeStr = fn.Type().ToString()
             sprintf "not a function: %s" typeStr
