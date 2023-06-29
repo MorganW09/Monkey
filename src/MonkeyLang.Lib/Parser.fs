@@ -213,6 +213,47 @@ module Parser
             new Ast.ArrayLiteral(curToken, elements)
             |> toSomeExpr
         | None -> None
+
+    let parseHashLiteral p =
+        let curToken = p.curToken
+
+        let mutable pairs = Map.empty<Ast.IntegerLiteral, Ast.Expression>
+        
+        let mutable keepLooping = true
+        while not (peekTokenIs p TokenType.RBRACE) && keepLooping do
+            nextToken p
+            
+            let keySome = parseIntegerLiteral p
+
+            if keySome.IsSome then
+                let intLit = keySome.Value :?> Ast.IntegerLiteral
+                if not (expectPeek p TokenType.COLON) then
+                    keepLooping <- false
+                    ()
+                else
+                    nextToken p
+
+                    let valueSome = parseExpression p ExprPrecedence.LOWEST
+
+                    if valueSome.IsSome then
+                        let value = valueSome.Value
+
+                        pairs <- pairs.Add(intLit, value)
+
+                        if not (peekTokenIs p TokenType.RBRACE) && not (expectPeek p TokenType.COMMA) then
+                            keepLooping <- false
+                        else
+                            ()
+                    else
+                        ()
+            else
+                ()
+            
+        if not (expectPeek p TokenType.RBRACE) then
+            None
+        else
+            new Ast.HashLiteral(curToken, pairs)
+            |> toSomeExpr
     
     let parsePrefixExpression p =
         let curToken = p.curToken
@@ -430,6 +471,7 @@ module Parser
         prefixFns.Add(TokenType.FUNCTION, parseFunctionLiteral)
         prefixFns.Add(TokenType.STRING, parseStringLiteral)
         prefixFns.Add(TokenType.LBRACKET, parseArrayLiteral)
+        prefixFns.Add(TokenType.LBRACE, parseHashLiteral)
 
         //regist infix parse functions
         let infixFns = new System.Collections.Generic.Dictionary<TokenType, infixParse>()

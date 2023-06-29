@@ -64,6 +64,10 @@ let canDowncastToIndexExpression (s: Ast.Expression) =
     match s with
     | :? Ast.IndexExpression as ie -> true
     | _ -> false
+let canDowncastToHashLiteral (s: Ast.Expression) =
+    match s with
+    | :? Ast.HashLiteral as hl -> true
+    | _ -> false
 
 let testLetStatement (expected: string) (s: Ast.Statement) =
     Assert.Equal(s.TokenLiteral(), "let")
@@ -96,10 +100,11 @@ let AssertNoParseErrors (p: ParserState) =
     //if errors, maybe print to err out
     //TODO - maybe include parser errors in the output
     //TODO - maybe print to stderr
-    let errorMessage =  if p.errors.Count > 0 then 
-                            let error = p.errors.ToArray() |> Array.reduce (fun a b -> sprintf "%s\n%s" a b)
-                            error
-                        else ""
+    let errorMessage =  
+        if p.errors.Count > 0 then 
+            let error = p.errors.ToArray() |> Array.reduce (fun a b -> sprintf "%s\n%s" a b)
+            error
+        else ""
     Assert.True(0 = p.errors.Count, errorMessage)
 
 let testIntegerLiteral (il : Ast.Expression) (value) =
@@ -730,3 +735,69 @@ let ``Can parse array index expression`` () =
     testIdentifier indexExpr.left "myArray"
 
     testIntInfixExpression indexExpr.index 1L "+" 1L
+
+[<Fact>]
+let ``Can parse hash literal`` () =
+    let input = "{ 2: \"test\", 23: \"23\", 22: \"hello\"}"
+
+    let expr = canAssertExpressionStatement input
+
+    Assert.True(canDowncastToHashLiteral expr)
+
+    let hashLit = expr :?> Ast.HashLiteral
+
+    Assert.Equal(3, hashLit.pairs.Count)
+
+    let expectedMap =
+        Map.empty
+            .Add(2L, "test")
+            .Add(23L, "23")
+            .Add(22L, "hello")
+    
+    for e in hashLit.pairs do
+        let expected = expectedMap.[e.Key.value]
+
+        Assert.Equal(expected, e.Value.Str())
+
+[<Fact>]
+let ``Can parse hash literal with expressions`` () =
+    let input = "{ 2: 2 + 2, 23: 3 * 3, 22: 4 / 4}"
+
+    let expr = canAssertExpressionStatement input
+
+    Assert.True(canDowncastToHashLiteral expr)
+
+    let hashLit = expr :?> Ast.HashLiteral
+
+    Assert.Equal(3, hashLit.pairs.Count)
+
+    let expectedMap =
+        Map.empty
+            .Add(2L, 2L)
+            .Add(23L, 3L)
+            .Add(22L, 4L) 
+    
+    let mutable count = 1
+    for e in hashLit.pairs do
+        let key = e.Key.value
+        let value = e.Value
+
+        let expectedNum = expectedMap.[key]
+        match key with
+        | 2L -> testIntInfixExpression value expectedNum "+" expectedNum
+        | 23L -> testIntInfixExpression value expectedNum "*" expectedNum
+        | _ -> testIntInfixExpression value expectedNum "/" expectedNum
+
+        count <- count + 1
+
+[<Fact>]
+let ``Can parse empty hash literal`` () =
+   let input = "{}"
+
+   let expr = canAssertExpressionStatement input
+
+   Assert.True(canDowncastToHashLiteral expr)
+
+   let hashLit = expr :?> Ast.HashLiteral
+
+   Assert.Equal(0, hashLit.pairs.Count)

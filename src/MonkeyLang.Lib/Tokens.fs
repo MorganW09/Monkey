@@ -27,6 +27,7 @@
         | RBRACE
         | LBRACKET
         | RBRACKET
+        | COLON
         // keywords
         | FUNCTION
         | LET

@@ -16,6 +16,7 @@ module Ast
     | StringLiteral
     | ArrayLiteral
     | IndexExpression
+    | HashLiteral
 
     type Node =
         abstract member TokenLiteral : unit -> string
@@ -62,6 +63,17 @@ module Ast
             member this.TokenLiteral () = token.Literal
             member this.expressionNode () = ()
             member this.Str () = sprintf "%d" value
+        override x.Equals(y) =
+            match y with
+                | :? IntegerLiteral as y -> (x = y)
+                | _ -> false
+        override this.GetHashCode() = 
+            this.value.GetHashCode()
+        interface System.IComparable with
+            member x.CompareTo y =
+                match y with
+                    | :? IntegerLiteral as y -> x.value.CompareTo(y.value)
+                    | _ -> invalidArg "y" "cannot compare values of different types" 
 
     type PrefixExpression(token: Tokens.Token, operator: string, right: Expression) =
         member this.token = token
@@ -237,4 +249,15 @@ module Ast
                 
                 sprintf "(%s[%s])" leftStr indexStr
 
-
+    type HashLiteral(token: Tokens.Token, pairs: Collections.Map<IntegerLiteral, Expression>) =
+        member this.token = token
+        member this.pairs = pairs
+        interface Expression with
+            member this.AType () = AstType.HashLiteral
+            member this.TokenLiteral () = this.token.Literal
+            member this.expressionNode () = ()
+            member this.Str () = 
+                pairs
+                |> Seq.map (fun pair -> (sprintf "%d:%s" pair.Key.value (pair.Value.Str())))
+                |> Seq.reduce (fun a b -> sprintf "%s, %s" a b)
+                |> sprintf "{%s}"
