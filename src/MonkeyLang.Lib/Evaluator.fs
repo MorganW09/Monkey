@@ -461,19 +461,25 @@ module Evaluator
     and evalBlockStatement (block: Ast.BlockStatement) (env: Object.Environment) =
         let mutable result : Object.Object option = None
         let mutable earlyReturn : Object.Object option = None
+        let mutable keepGoing = true
+        let mutable stmtCount = 0
 
-        for stmt in block.statements do
+        while stmtCount < block.statements.Length && keepGoing do
+            let stmt = block.statements.[stmtCount]
             result <- (eval stmt env)
 
             match result with
             | Some r ->
                 if earlyReturn.IsNone && (r.Type() = Object.RETURN || r.Type() = Object.ERROR)  then
                     earlyReturn <- Some r
+                    keepGoing <- false
                     ()
                 else
                     ()
             | None ->
                 ()
+            
+            stmtCount <- stmtCount + 1
         
         if earlyReturn.IsSome then
             earlyReturn
@@ -497,20 +503,25 @@ module Evaluator
     and evalExpressions (exps: Ast.Expression[]) (env: Object.Environment) =
         let results = new ResizeArray<Object.Object>()
         let errorResult = new ResizeArray<Object.Object>()
+        let mutable exprIndex = 0
+        let mutable keepGoing = true
 
-        for exp in exps do
+        while exprIndex < exps.Length && keepGoing do
+            let exp = exps.[exprIndex]
             let evaluated = eval exp env
 
             match evaluated with
             | Some ev ->
                 if isError ev && errorResult.Count = 0 then
                     errorResult.Add(ev)
+                    keepGoing <- false
                     ()
                 else
                     results.Add(ev)
                     ()
             | None ->
                 ()
+            exprIndex <- exprIndex + 1
         
         if errorResult.Count > 0 then
             errorResult.ToArray()
@@ -539,7 +550,7 @@ module Evaluator
     and evalHashLiteral (hash: Ast.HashLiteral) (env: Object.Environment) =
         let mutable pairs = Map.empty<Object.Integer, Object.Object>
         let mutable error: Object.Object option = None
-
+        
         for e in hash.pairs do
             let oldKey = e.Key
 

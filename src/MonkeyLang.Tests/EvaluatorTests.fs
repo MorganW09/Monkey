@@ -494,3 +494,23 @@ let ``Can test hash literals`` () =
        let obj = objSome.Value
 
        Assert.Equal(e.Value, obj.Inspect())
+
+[<Fact>]
+let ``Can test fibonacci`` () =
+    let input = "let fib = fn (x) {
+    if (x < 1) {
+        return 0;
+    }
+    
+    if (x == 1) {
+        return 1;
+    }
+
+    return fib(x - 1) + fib(x - 2);
+};
+
+fib(3)"
+
+    let evaluated = testEval input
+
+    testIntegerObject evaluated 2L

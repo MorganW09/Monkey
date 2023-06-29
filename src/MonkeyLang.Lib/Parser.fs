@@ -399,39 +399,6 @@ module Parser
                 new Ast.FunctionLiteral(curToken, parameters, body)
                 |> toSomeExpr
 
-    // let parseCallArguments p =
-    //     let args = new ResizeArray<Ast.Expression>()
-
-    //     if peekTokenIs p TokenType.RPAREN then
-    //         nextToken p
-    //         Array.empty<Ast.Expression>
-    //     else
-    //         nextToken p
-
-    //         let arg = parseExpression p ExprPrecedence.LOWEST
-
-    //         if arg.IsNone then
-    //             Array.empty<Ast.Expression>
-    //         else
-    //             args.Add(arg.Value)
-
-    //             while peekTokenIs p TokenType.COMMA do
-    //                 nextToken p
-    //                 nextToken p
-                    
-    //                 let arg2 = parseExpression p ExprPrecedence.LOWEST
-
-    //                 match arg2 with
-    //                 | Some a -> 
-    //                     args.Add(a)
-    //                     ()
-    //                 | None -> ()
-                
-    //             if not (expectPeek p TokenType.RPAREN) then
-    //                 Array.empty<Ast.Expression>
-    //             else
-    //                 args.ToArray()
-
     let parseCallExpression p (func: Ast.Expression) =
         let curToken = p.curToken
         
