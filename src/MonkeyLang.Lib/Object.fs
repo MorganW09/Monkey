@@ -10,6 +10,7 @@ module Object
     | STRING
     | BUILTIN
     | ARRAY
+    | HASH
 
     type Object =
         abstract member Type : unit -> ObjectType
@@ -24,6 +25,17 @@ module Object
                 sprintf "%d" this.value
             member this.Type () =
                 ObjectType.INTEGER
+        override x.Equals(y) =
+            match y with
+                | :? Integer as y -> (x = y)
+                | _ -> false
+        override this.GetHashCode() = 
+            this.value.GetHashCode()
+        interface System.IComparable with
+            member x.CompareTo y =
+                match y with
+                    | :? Integer as y -> x.value.CompareTo(y.value)
+                    | _ -> invalidArg "y" "cannot compare values of different types" 
     
     type Boolean(value: bool) =
         member this.value = value
@@ -115,3 +127,19 @@ module Object
                     |> Array.reduce (fun a b -> sprintf "%s, %s" a b)
                 
                 sprintf "[%s]" elementStr
+
+    type Hash(pairs: Map<Integer, Object>) =
+        member this.pairs = pairs
+        member this.Get (key: Integer) =
+            if this.pairs.ContainsKey key then
+                Some this.pairs.[key]
+            else
+                None
+        interface Object with
+            member this.Type() =
+                ObjectType.HASH
+            member this.Inspect () = 
+                pairs
+                |> Seq.map (fun pair -> (sprintf "%d:%s" pair.Key.value (pair.Value.Inspect())))
+                |> Seq.reduce (fun a b -> sprintf "%s, %s" a b)
+                |> sprintf "{%s}"

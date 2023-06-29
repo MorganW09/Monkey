@@ -249,7 +249,7 @@ module Ast
                 
                 sprintf "(%s[%s])" leftStr indexStr
 
-    type HashLiteral(token: Tokens.Token, pairs: Collections.Map<IntegerLiteral, Expression>) =
+    type HashLiteral(token: Tokens.Token, pairs: Map<IntegerLiteral, Expression>) =
         member this.token = token
         member this.pairs = pairs
         interface Expression with

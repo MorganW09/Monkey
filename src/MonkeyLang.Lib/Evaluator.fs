@@ -44,6 +44,12 @@ module Evaluator
     let isError (obj: Object.Object) =
         obj.Type() = Object.ObjectType.ERROR
 
+    let isSomeError (obj: Object.Object option) =
+        if obj.IsSome then
+            isError obj.Value
+        else
+            false
+
     let nativeBoolToBooleanObject input =
         if input then trueBooleanObject
         else falseBooleanObject
@@ -228,12 +234,26 @@ module Evaluator
         else
             let smallIndex = int32 index
             arrayObj.elements.[smallIndex]
+
+    let evalHashIndexExpresson (left: Object.Object) (index: Object.Object) =
+        let ind = (index :?> Object.Integer)
+
+        let hash = (left :?> Object.Hash)
+
+        match hash.Get ind with
+        | Some v ->
+            v
+        | None ->
+            nullObject
+            |> toObj
         
 
     let evalIndexExpression (left: Object.Object) (index: Object.Object) =
         match left.Type(), index.Type() with
         | Object.ObjectType.ARRAY, Object.ObjectType.INTEGER ->
             evalArrayIndexExpression left index
+        | Object.ObjectType.HASH, Object.ObjectType.INTEGER ->
+            evalHashIndexExpresson left index
         | _, _ ->
             left.Type().ToString()
             |> sprintf "index operator not support: %s"
@@ -398,6 +418,11 @@ module Evaluator
                         None
             else
                 None
+        | Ast.HashLiteral ->
+            let hash = node :?> Ast.HashLiteral
+            
+            evalHashLiteral hash env
+            |> toSomeObj
 
     and evalProgram (stmts: Ast.Statement[]) (env: Object.Environment) =
         let mutable result : Object.Object option = None
@@ -510,6 +535,37 @@ module Evaluator
             sprintf "not a function: %s" typeStr
             |> newError 
             |> toSomeObj
+    
+    and evalHashLiteral (hash: Ast.HashLiteral) (env: Object.Environment) =
+        let mutable pairs = Map.empty<Object.Integer, Object.Object>
+        let mutable error: Object.Object option = None
+
+        for e in hash.pairs do
+            let oldKey = e.Key
+
+            let newKey = eval oldKey env
+
+            if isSomeError newKey then
+                error <- newKey
+                ()
+            else
+                let key = newKey.Value :?> Object.Integer
+
+                let value = eval e.Value env
+
+                if isSomeError value && error.IsNone then
+                    error <- value
+                    ()
+                else
+                    pairs <- pairs.Add(key, value.Value)
+                    ()
+        
+        if error.IsSome then
+            error.Value
+            |> toObj
+        else
+            new Object.Hash(pairs)
+            |> toObj
 
     let evaluate (node: Ast.Node) =
         let env = new Object.Environment(None)

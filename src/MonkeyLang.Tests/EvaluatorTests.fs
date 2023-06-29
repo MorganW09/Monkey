@@ -37,7 +37,13 @@ let canDowncastToArray (obj : Object.Object) =
     match obj with 
     | :? Object.Array as arr -> true
     | _ -> false
+let canDowncastToHash (obj : Object.Object) =
+    match obj with 
+    | :? Object.Hash as hash -> true
+    | _ -> false
 
+let toInteger input =
+    new Object.Integer(input)
  
 let testEval input =
     let lexer = createLexer input
@@ -413,4 +419,78 @@ let ``Can test array index expression`` input (expected: int64 Nullable) =
     | false -> 
         testNullObject evaluated
 
-//183
+[<Fact>]
+let ``Can grab hash value`` () =
+    let input = "let h = {
+        1: 100,
+    };
+    h[1]"
+
+    let evaluated = testEval input
+
+    testIntegerObject evaluated 100L
+
+[<Fact>]
+let ``Can grab hash value of string`` () =
+    let input = "let h = {
+        1: \"test baby\",
+    };
+    h[1]"
+
+    let evaluated = testEval input
+
+    testStringLiteral evaluated "test baby"
+
+[<Fact>]
+let ``Can hash return null for bad key`` () =
+    let input = "let h = {
+        1: \"test baby\",
+    };
+    h[2]"
+
+    let evaluated = testEval input
+
+    testNullObject evaluated
+
+
+[<Fact>]
+let ``Can test hash literals`` () =
+   let input = "{
+       1: \"one\",
+       2: \"two\",
+       3: \"three\",
+       4: \"four\",
+       5: \"five\",
+       6: \"six\",
+   }"
+
+   let evaluatedSome = testEval input
+    
+   Assert.True(evaluatedSome.IsSome, "IsNone")
+
+   let evaluated = evaluatedSome.Value
+   let objType = evaluated.GetType().ToString()
+
+   Assert.True(canDowncastToHash evaluated, (sprintf "Cannot downcast %s to Hash" objType))
+
+   let hash = evaluated :?> Object.Hash
+
+   let expectedMap =
+       Map.empty
+           .Add(toInteger 1L, "one")
+           .Add(toInteger 2L, "two")
+           .Add(toInteger 3L, "three")
+           .Add(toInteger 4L, "four")
+           .Add(toInteger 5L, "five")
+           .Add(toInteger 6L, "six")
+    
+   for e in expectedMap do
+       let key = e.Key
+
+       let objSome = hash.Get key
+
+       Assert.True(objSome.IsSome, (sprintf "Did not find key: %d" key.value))
+
+       let obj = objSome.Value
+
+       Assert.Equal(e.Value, obj.Inspect())

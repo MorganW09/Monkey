@@ -1,0 +1,15 @@
+let x = 1;
+let y  = x + 2;
+let z = x * y;
+puts("Printing x, y, and z");
+puts("x", x, "y", y, "z", z);
+
+
+let nums = [1, 2, 3];
+puts("Printing array");
+puts(nums);
+
+
+let hash = {1: "Baby", 2: "Hello"};
+puts("Printing hash");
+puts(hash);

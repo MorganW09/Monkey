@@ -122,14 +122,18 @@ module Parser
 
                 let value = parseExpression p ExprPrecedence.LOWEST
 
-                while not (curTokenIs p TokenType.SEMICOLON) do
+                while not (curTokenIs p TokenType.SEMICOLON) && not (curTokenIs p TokenType.EOF) do
                     nextToken p
 
-                match value with
-                | Some v ->
-                    let letStatement = new Ast.LetStatement(letToken, identStatement, v)
-                    Some (letStatement :> Ast.Statement)
-                | None -> None
+                if curTokenIs p TokenType.EOF then
+                    p.errors.Add(sprintf "Let statement identified as \"%s\" needs an ending semicolon" identStatement.value)
+                    None
+                else
+                    match value with
+                    | Some v ->
+                        let letStatement = new Ast.LetStatement(letToken, identStatement, v)
+                        Some (letStatement :> Ast.Statement)
+                    | None -> None
 
     let parseReturnStatement p =
         let returnToken = p.curToken

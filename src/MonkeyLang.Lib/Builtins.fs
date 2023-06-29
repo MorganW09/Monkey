@@ -120,6 +120,12 @@ module Builtins
                     |> sprintf "argument to \"push\" must be ARRAY, got %s"
                 new Object.Error(errorStr)
                 |> toObj
+    let putsFn (objs: Object.Object[]) : Object.Object =
+        for obj in objs do
+            let str = obj.Inspect()
+            printfn "%s" str
+        nullObject
+        |> toObj
 
     let builtinsMap =
         Map.empty
@@ -128,3 +134,4 @@ module Builtins
             .Add("last", new Object.Builtin(lastFn))
             .Add("rest", new Object.Builtin(restFn))
             .Add("push", new Object.Builtin(pushFn))
+            .Add("puts", new Object.Builtin(putsFn))
