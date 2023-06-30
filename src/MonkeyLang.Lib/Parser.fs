@@ -166,7 +166,7 @@ module Parser
         | true, l ->
             new Ast.IntegerLiteral(p.curToken, l)
             |> toSomeExpr
-        | _ -> 
+        | _ ->
             let errorMsg = sprintf "could not parse %s as integer" p.curToken.Literal
             p.errors.Add(errorMsg)
             None

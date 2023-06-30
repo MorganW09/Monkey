@@ -12,11 +12,14 @@ module Builtins
         length
         |> toInt
         |> toObj
-    let buildLengthError desiredLength length =
-        let errorStr = sprintf "wrong number of arguments. got=%d, want=%d" length desiredLength
-        new Object.Error(errorStr)
+
+    let buildErrorObj msg =
+        new Object.Error(msg)
         |> toObj
 
+    let buildLengthError desiredLength length =
+        sprintf "wrong number of arguments. got=%d, want=%d" length desiredLength
+        |> buildErrorObj
 
     let lenFn (objs: Object.Object[]) : Object.Object =
         if objs.Length <> 1 then
@@ -115,11 +118,10 @@ module Builtins
                 new Object.Array(newArr)
                 |> toObj
             | _ ->
-                let errorStr =
-                    arg.Type().ToString()
-                    |> sprintf "argument to \"push\" must be ARRAY, got %s"
-                new Object.Error(errorStr)
-                |> toObj
+                arg.Type().ToString()
+                |> sprintf "argument to \"push\" must be ARRAY, got %s"
+                |> buildErrorObj
+
     let putsFn (objs: Object.Object[]) : Object.Object =
         for obj in objs do
             let str = obj.Inspect()
